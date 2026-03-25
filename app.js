@@ -15,13 +15,15 @@ function parseExpImages(val) {
   catch { return [val]; }
 }
 
-// 後台帳密（可直接修改）
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
+// 後台帳密（可用環境變數覆蓋）
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-// 確保 uploads 目錄存在
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+// 確保 uploads 目錄存在（支援環境變數指定路徑）
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 // 設定 multer 檔案上傳
 const storage = multer.diskStorage({
@@ -49,7 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(uploadsDir));
 app.use(session({
-  secret: 'quiz-secret-key-2024',
+  secret: process.env.SESSION_SECRET || 'quiz-secret-key-2024',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
@@ -476,8 +478,8 @@ app.get('/admin/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`伺服器啟動：http://localhost:${PORT}`);
-  console.log(`後台管理：http://localhost:${PORT}/admin`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`伺服器啟動：http://0.0.0.0:${PORT}`);
+  console.log(`後台管理：http://0.0.0.0:${PORT}/admin`);
   console.log(`帳號：${ADMIN_USERNAME}  密碼：${ADMIN_PASSWORD}`);
 });
