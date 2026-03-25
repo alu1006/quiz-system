@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>線上作答系統</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- 歡迎頁（考試列表） -->
+<div id="welcome-screen">
+  <div class="hero">
+    <div class="hero-content">
+      <h1>線上作答系統</h1>
+      <p id="hero-subtitle">載入考試中...</p>
+      <div id="exam-list" style="width:100%; max-width:420px; margin-top:8px;"></div>
+    </div>
+  </div>
+  <div style="text-align:right; padding:10px 22px;">
+    <a href="/admin" style="font-size:.8rem; color:var(--nord3); text-decoration:none;">後台管理 →</a>
+  </div>
+</div>
+
+<!-- 姓名輸入 Modal -->
+<div id="name-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center;">
+  <div style="background:var(--nord1); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:36px 30px; width:min(400px,90vw); box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <h2 style="margin-bottom:6px; font-size:1.15rem; color:var(--nord6); font-weight:800;" id="name-modal-exam-name">考試名稱</h2>
+    <p style="color:var(--nord4); font-size:.85rem; margin-bottom:22px;">請輸入您的姓名開始作答</p>
+    <input type="text" id="student-name" placeholder="輸入姓名" maxlength="20" autofocus
+      style="width:100%; box-sizing:border-box; padding:13px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.95rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; transition:border-color .2s, box-shadow .2s;">
+    <button onclick="startQuiz()"
+      style="width:100%; margin-top:14px; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; transition:background .2s, transform .15s; font-family:inherit;">開始作答 →</button>
+    <button onclick="closeNameModal()" style="margin-top:12px; width:100%; background:none; border:none; color:var(--nord4); cursor:pointer; font-size:.85rem; padding:6px; font-family:inherit;">取消</button>
+  </div>
+</div>
+
+<!-- 作答畫面 -->
+<div id="quiz-screen" style="display:none;">
+  <nav class="navbar">
+    <h1 id="nav-exam-name">線上作答</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="nav-student" style="font-weight:700; color:var(--text-secondary); font-size:.85rem;"></span>
+      <button class="navbar-overview-btn" onclick="toggleOverview()" title="題目總覽">📋 總覽</button>
+    </div>
+  </nav>
+
+  <!-- 題目總覽面板 -->
+  <div id="overview-backdrop" class="overview-backdrop" onclick="toggleOverview()"></div>
+  <div id="overview-panel" class="overview-panel">
+    <div class="overview-header">
+      <h3>題目總覽</h3>
+      <button class="overview-close" onclick="toggleOverview()">✕</button>
+    </div>
+    <div id="overview-progress" class="overview-progress"></div>
+    <div id="overview-grid" class="overview-grid"></div>
+    <div class="overview-submit">
+      <button class="btn btn-success btn-lg" onclick="toggleOverview(); submitAnswers();" style="width:100%;">交卷</button>
+    </div>
+  </div>
+
+  <div class="container" style="max-width:800px; padding-bottom:80px;">
+    <div class="quiz-progress">
+      <span class="quiz-progress-text" id="progress-text">0 / 0 已作答</span>
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <span style="font-size:.8rem; color:var(--text-muted);" id="progress-pct">0%</span>
+    </div>
+
+    <div id="question-display"></div>
+
+    <!-- 導覽列 -->
+    <div class="quiz-nav">
+      <button id="btn-prev" onclick="prevQuestion()" class="btn btn-outline">← 上一題</button>
+      <label class="auto-next-label">
+        <input type="checkbox" id="auto-next" checked> 自動下一題
+      </label>
+      <button id="btn-next" onclick="nextQuestion()" class="btn btn-outline">下一題 →</button>
+    </div>
+
+    <div class="quiz-submit-area">
+      <button class="btn btn-success btn-lg" onclick="submitAnswers()">交卷</button>
+      <p>選填題目可跳過，不影響必答分數</p>
+    </div>
+  </div>
+</div>
+
+<!-- 成績頁 -->
+<div id="result-screen" style="display:none;">
+  <nav class="navbar">
+    <h1>作答結果</h1>
+    <button class="btn btn-outline btn-sm" onclick="restartQuiz()">重新作答</button>
+  </nav>
+  <div class="container">
+    <div id="result-hero" class="result-hero">
+      <div class="result-hero-content">
+        <div class="score-ring">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="56" fill="none" stroke="rgba(216,222,233,.15)" stroke-width="10"/>
+            <circle id="score-arc" cx="70" cy="70" r="56" fill="none" stroke="var(--nord8)" stroke-width="10"
+              stroke-linecap="round" stroke-dasharray="351.9" stroke-dashoffset="351.9"
+              style="transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)"/>
+          </svg>
+          <div class="score-text">
+            <div class="score-num" id="result-score">0</div>
+            <div class="score-unit">分</div>
+          </div>
+        </div>
+        <div class="result-name" id="result-name"></div>
+        <div class="result-summary" id="result-summary"></div>
+        <div id="result-optional-note" style="margin-top:8px; font-size:.8rem; color:var(--nord4);"></div>
+      </div>
+    </div>
+
+    <h3 style="font-size:.85rem; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">作答詳情</h3>
+    <div id="result-details"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.88); z-index:999; align-items:center; justify-content:center; cursor:zoom-out; padding:20px;">
+  <img id="lightbox-img" src="" alt="" style="max-width:95vw; max-height:92vh; object-fit:contain; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); user-select:none;">
+  <button onclick="closeLightbox()" style="position:fixed; top:16px; right:20px; background:rgba(255,255,255,.15); border:none; color:white; font-size:1.4rem; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+</div>
+
+<script>
+let studentName = '';
+let questions = [];
+let userAnswers = {};
+let currentExamId = null;
+let currentExamName = '';
+let currentQuestionIndex = 0;
+
+// ─── 載入考試列表 ───
+async function loadExams() {
+  try {
+    const res = await fetch('/api/exams');
+    const exams = await res.json();
+    const listEl = document.getElementById('exam-list');
+    const subtitle = document.getElementById('hero-subtitle');
+
+    if (!exams.length) {
+      subtitle.textContent = '目前沒有開放中的考試';
+      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:.9rem; text-align:center; margin-top:8px;">請稍後再來或聯繫管理員開放考試。</p>';
+      return;
+    }
+
+    subtitle.textContent = '選擇考試，開始作答';
+    listEl.innerHTML = exams.map(e => `
+      <div style="background:rgba(255,255,255,.08); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:18px 22px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+        <div>
+          <div style="font-weight:700; font-size:1.05rem; color:var(--nord6);">${esc(e.name)}</div>
+          ${e.description ? `<div style="font-size:.82rem; color:var(--nord4); margin-top:4px;">${esc(e.description)}</div>` : ''}
+          <div style="font-size:.78rem; color:var(--nord3); margin-top:4px;">${e.question_count} 題</div>
+        </div>
+        <button onclick="selectExam(${e.id},'${esc(e.name)}')" style="white-space:nowrap; flex-shrink:0; padding:10px 20px; border-radius:9px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.92rem; border:none; cursor:pointer; transition:background .2s, transform .15s;">開始 →</button>
+      </div>
+    `).join('');
+  } catch {
+    document.getElementById('hero-subtitle').textContent = '載入失敗，請重新整理';
+  }
+}
+
+function selectExam(examId, examName) {
+  currentExamId = examId;
+  currentExamName = examName;
+  document.getElementById('name-modal-exam-name').textContent = examName;
+  document.getElementById('student-name').value = '';
+  document.getElementById('name-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('student-name').focus(), 100);
+}
+
+function closeNameModal() {
+  document.getElementById('name-modal').style.display = 'none';
+}
+
+async function startQuiz() {
+  const inp = document.getElementById('student-name');
+  const name = inp.value.trim();
+  if (!name) { inp.style.borderColor='rgba(191,97,106,.6)'; inp.focus(); return; }
+  studentName = name;
+  try {
+    const res = await fetch(`/api/exams/${currentExamId}/questions`);
+    if (!res.ok) { alert('考試不存在或已關閉。'); return; }
+    questions = await res.json();
+    if (!questions.length) { alert('此考試目前沒有題目，請稍後再試。'); return; }
+    userAnswers = {};
+    renderQuestions();
+    closeNameModal();
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('quiz-screen').style.display = 'block';
+    document.getElementById('nav-exam-name').textContent = currentExamName;
+    document.getElementById('nav-student').textContent = name;
+    updateProgress();
+    window.scrollTo(0, 0);
+  } catch { alert('載入失敗，請重新整理。'); }
+}
+
+function renderQuestions() {
+  currentQuestionIndex = 0;
+  showQuestion(0);
+}
+
+function showQuestion(index) {
+  if (index < 0 || index >= questions.length) return;
+  currentQuestionIndex = index;
+  const q = questions[index];
+  const c = document.getElementById('question-display');
+
+  // 找到題組名稱
+  const groupLabel = q.group_name || null;
+
+  c.innerHTML = `
+    ${groupLabel ? `
+      <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:.78rem; font-weight:700; color:var(--text-muted); letter-spacing:.04em;">📁 ${esc(groupLabel)}</span>
+      </div>
+    ` : ''}
+    <div class="question-card${q.is_optional ? ' optional' : ''}" style="margin-bottom:0;">
+      <div class="question-header">
+        <span class="q-badge">第 ${index+1} 題 / 共 ${questions.length} 題</span>
+        ${q.is_optional ? '<span class="optional-badge">選填</span>' : ''}
+        ${q.title ? `<span class="question-title">${esc(q.title)}</span>` : ''}
+      </div>
+      ${q.image_path ? `<img src="${q.image_path}" class="question-image zoomable" alt="題目截圖" onclick="openLightbox(this.src)" title="點擊放大">` : ''}
+      ${q.question_text ? `<div style="font-size:.97rem; line-height:1.75; color:var(--text-primary); margin-bottom:16px; white-space:pre-wrap;">${esc(q.question_text)}</div>` : ''}
+      ${q.question_type === 'fill' ? `
+        <div class="fill-input-wrap">
+          <input type="text" class="fill-input" id="fill-${q.id}" placeholder="請輸入答案…" value="${esc(userAnswers[q.id]||'')}" oninput="fillOpt(${q.id}, this.value)">
+        </div>
+      ` : `
+        <div class="options">
+          ${['A','B','C','D','E','F'].filter(o => q['option_'+o.toLowerCase()]).map(o => `
+            <label class="option-label${userAnswers[q.id]===o?' selected':''}" id="opt-${q.id}-${o}" onclick="selectOpt(${q.id},'${o}',this)">
+              <input type="radio" name="q${q.id}" value="${o}" ${userAnswers[q.id]===o?'checked':''}>
+              <div class="opt-circle">${o}</div>
+              <span>${esc(q['option_'+o.toLowerCase()])}</span>
+            </label>
+          `).join('')}
+        </div>
+      `}
+      ${q.is_optional ? '<div style="margin-top:10px; font-size:.78rem; color:var(--optional); font-weight:600;">此題為選填，可跳過不作答</div>' : ''}
+    </div>
+  `;
+
+  // 更新導覽按鈕狀態
+  document.getElementById('btn-prev').disabled = index === 0;
+  document.getElementById('btn-prev').style.opacity = index === 0 ? '.4' : '1';
+  document.getElementById('btn-next').disabled = index === questions.length - 1;
+  document.getElementById('btn-next').style.opacity = index === questions.length - 1 ? '.4' : '1';
+
+  window.scrollTo(0, 0);
+  updateProgress();
+  updateOverviewGrid();
+}
+
+function nextQuestion() {
+  if (currentQuestionIndex < questions.length - 1) showQuestion(currentQuestionIndex + 1);
+}
+
+function prevQuestion() {
+  if (currentQuestionIndex > 0) showQuestion(currentQuestionIndex - 1);
+}
+
+function goToQuestion(index) {
+  showQuestion(index);
+  // 如果總覽面板開著，自動關閉
+  const panel = document.getElementById('overview-panel');
+  if (panel.style.display !== 'none') toggleOverview();
+}
+
+function toggleOverview() {
+  const panel = document.getElementById('overview-panel');
+  const backdrop = document.getElementById('overview-backdrop');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  backdrop.style.display = isOpen ? 'none' : 'block';
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+  if (!isOpen) updateOverviewGrid();
+}
+
+function updateOverviewGrid() {
+  const grid = document.getElementById('overview-grid');
+  if (!grid) return;
+  const required = questions.filter(q => !q.is_optional);
+  const answeredRequired = required.filter(q => userAnswers[q.id]).length;
+  document.getElementById('overview-progress').textContent =
+    `必答 ${answeredRequired} / ${required.length} 題已作答`;
+
+  grid.innerHTML = questions.map((q, i) => {
+    const answered = !!userAnswers[q.id];
+    const isCurrent = i === currentQuestionIndex;
+    let cls = 'overview-btn';
+    if (isCurrent) cls += ' current';
+    else if (answered) cls += ' answered';
+    return `<button class="${cls}" onclick="goToQuestion(${i})" title="第${i+1}題${q.is_optional?' (選填)':''}${answered?' ✓':''}">${i+1}${q.is_optional?'<span class="opt-tag">選</span>':''}</button>`;
+  }).join('');
+}
+
+function selectOpt(qId, opt, el) {
+  ['A','B','C','D','E','F'].forEach(o => document.getElementById(`opt-${qId}-${o}`)?.classList.remove('selected'));
+  el.classList.add('selected');
+  userAnswers[qId] = opt;
+  updateProgress();
+  updateOverviewGrid();
+  // 自動下一題
+  if (document.getElementById('auto-next').checked) {
+    setTimeout(() => nextQuestion(), 300);
+  }
+}
+
+function fillOpt(qId, val) {
+  userAnswers[qId] = val;
+  updateProgress();
+  updateOverviewGrid();
+}
+
+function updateProgress() {
+  const required = questions.filter(q => !q.is_optional);
+  const answeredRequired = required.filter(q => userAnswers[q.id]).length;
+  const pct = required.length ? Math.round(answeredRequired / required.length * 100) : 0;
+  document.getElementById('progress-text').textContent = `必答 ${answeredRequired} / ${required.length} 題已作答`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = pct + '%';
+}
+
+async function submitAnswers() {
+  const requiredUnanswered = questions.filter(q => !q.is_optional && !userAnswers[q.id]);
+  if (requiredUnanswered.length && !confirm(`還有 ${requiredUnanswered.length} 道必答題未作答，確定要提交嗎？`)) return;
+  const answers = questions.map(q => ({ question_id: q.id, selected_answer: userAnswers[q.id]||'' })).filter(a=>a.selected_answer);
+  try {
+    const res = await fetch('/api/submit', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ student_name: studentName, answers, exam_id: currentExamId })
+    });
+    showResult(await res.json());
+  } catch { alert('提交失敗，請稍後再試。'); }
+}
+
+function showResult(data) {
+  document.getElementById('quiz-screen').style.display = 'none';
+  document.getElementById('result-screen').style.display = 'block';
+  const hero = document.getElementById('result-hero');
+  if (data.score < 60) hero.classList.add('fail');
+  document.getElementById('result-name').textContent = data.student_name + ' 的成績';
+  document.getElementById('result-summary').textContent =
+    `必答 ${data.required_total} 題，答對 ${data.required_correct} 題`;
+  const optAnswered = data.results.filter(r=>r.is_optional).length;
+  if (optAnswered) {
+    const optCorrect = data.results.filter(r=>r.is_optional && r.is_correct).length;
+    document.getElementById('result-optional-note').textContent =
+      `另作答 ${optAnswered} 道選填題，答對 ${optCorrect} 題`;
+  }
+
+  const scoreEl = document.getElementById('result-score');
+  const arc = document.getElementById('score-arc');
+  let s = 0;
+  const timer = setInterval(() => {
+    s = Math.min(s+2, data.score);
+    scoreEl.textContent = s;
+    arc.style.strokeDashoffset = 351.9 - (351.9 * s / 100);
+    if (s >= data.score) clearInterval(timer);
+  }, 16);
+
+  const dmap = {};
+  data.results.forEach(r => dmap[r.question_id] = r);
+
+  // 依題組分區顯示
+  const groups = [];
+  const groupMap = {};
+  questions.forEach((q, i) => {
+    if (!dmap[q.id]) return;
+    const key = q.group_id ? `${q.group_id}` : '__none__';
+    const label = q.group_name || null;
+    if (!groupMap[key]) {
+      groupMap[key] = { label, questions: [] };
+      groups.push(groupMap[key]);
+    }
+    groupMap[key].questions.push({ q, i, r: dmap[q.id] });
+  });
+
+  document.getElementById('result-details').innerHTML = groups.map(group => {
+    const correct = group.questions.filter(x => x.r.is_correct).length;
+    const total = group.questions.length;
+    return `
+      ${group.label ? `
+        <div style="margin:24px 0 10px; display:flex; align-items:center; gap:10px;">
+          <div style="flex:1; height:1px; background:var(--border);"></div>
+          <span style="font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); white-space:nowrap;">
+            📁 ${esc(group.label)} &nbsp;
+            <span style="color:${correct===total?'var(--success)':'var(--danger)'};">${correct} / ${total}</span>
+          </span>
+          <div style="flex:1; height:1px; background:var(--border);"></div>
+        </div>
+      ` : ''}
+      ${group.questions.map(({q, i, r}) => `
+        <div class="result-item ${r.is_correct?'correct':'wrong'}${r.is_optional?' optional-result':''}">
+          <div class="result-icon">${r.is_correct?'✓':'✗'}</div>
+          <div style="flex:1; min-width:0;">
+            <h4>第 ${i+1} 題${q.is_optional ? ' <span class="badge badge-optional" style="font-size:.7rem;">選填</span>' : ''}${q.title ? '：'+esc(q.title) : ''}</h4>
+            <p style="margin-bottom:${r.explanation?'10px':'0'};">你的答案：<strong>${r.selected}</strong>
+            ${!r.is_correct ? `　正確答案：<strong style="color:var(--success)">${r.correct_answer}</strong>` : ''}</p>
+            ${(r.explanation || (r.explanation_images && r.explanation_images.length)) ? `
+              <div style="margin-top:10px; padding:12px 14px; background:rgba(0,0,0,.04); border-radius:8px; border-left:3px solid ${r.is_correct?'var(--success)':'var(--danger)'};">
+                <div style="font-size:.73rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:8px;">詳解</div>
+                ${(r.explanation_images||[]).map(img => `<img src="${img}" class="zoomable" onclick="openLightbox(this.src)" style="max-width:100%; border-radius:6px; margin-bottom:8px; display:block; cursor:zoom-in;" title="點擊放大">`).join('')}
+                ${r.explanation ? `<div style="font-size:.88rem; color:var(--text-secondary); line-height:1.7; white-space:pre-wrap;">${esc(r.explanation)}</div>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('')}
+    `;
+  }).join('');
+
+  window.scrollTo(0,0);
+}
+
+function restartQuiz() {
+  studentName=''; userAnswers={}; currentExamId=null;
+  document.getElementById('student-name').value='';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('result-hero').classList.remove('fail');
+  document.getElementById('result-optional-note').textContent='';
+  document.getElementById('welcome-screen').style.display='block';
+  loadExams();
+}
+
+function openLightbox(src) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadExams();
+  document.getElementById('student-name').addEventListener('keydown', e => { if(e.key==='Enter') startQuiz(); });
+  document.addEventListener('keydown', e => {
+    if(e.key==='Escape') { closeLightbox(); closeNameModal();
+      const panel = document.getElementById('overview-panel');
+      if (panel && panel.style.display !== 'none') toggleOverview();
+    }
+    // 方向鍵切題（不在輸入框時）
+    if (document.getElementById('quiz-screen').style.display !== 'none' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) {
+      if (e.key==='ArrowLeft') prevQuestion();
+      if (e.key==='ArrowRight') nextQuestion();
+    }
+  });
+});
+</script>
+</body>
+</html>

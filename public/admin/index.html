@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>後台管理</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ═══ 登入頁 ═══ -->
+<div id="login-page" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">⚙️</div>
+    <h2>後台管理</h2>
+    <p>請輸入管理員帳號密碼</p>
+    <div id="login-alert"></div>
+    <div class="login-field">
+      <input type="text" id="username" placeholder="帳號" value="admin" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <input type="password" id="password" placeholder="密碼" autocomplete="current-password">
+    </div>
+    <button class="login-submit" onclick="doLogin()">登入</button>
+    <div class="login-back"><a href="/">← 回到學生作答頁</a></div>
+  </div>
+</div>
+
+<!-- ═══ 後台主頁 ═══ -->
+<div id="admin-page" style="display:none;">
+  <nav class="navbar">
+    <h1>⚙️ 後台管理</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="/" target="_blank" style="font-size:.85rem;">學生頁面 ↗</a>
+      <button class="btn btn-sm btn-ghost" onclick="doLogout()">登出</button>
+    </div>
+  </nav>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="sidebar-section">選單</div>
+      <a href="#" class="active" id="nav-q" onclick="showTab('questions',this)">
+        <span class="sidebar-icon">📋</span> 題目管理
+      </a>
+      <a href="#" id="nav-g" onclick="showTab('groups',this)">
+        <span class="sidebar-icon">📁</span> 題組管理
+      </a>
+      <a href="#" id="nav-e" onclick="showTab('exams',this)">
+        <span class="sidebar-icon">📝</span> 考試管理
+      </a>
+      <a href="#" id="nav-s" onclick="showTab('scores',this)">
+        <span class="sidebar-icon">📊</span> 學生成績
+      </a>
+    </aside>
+
+    <main class="admin-content">
+
+      <!-- 題目管理 -->
+      <div id="tab-questions">
+        <div id="q-stats" class="stat-cards" style="display:none;">
+          <div class="stat-card">
+            <div class="stat-label">題目總數</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-sub">道題目</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">有截圖</div>
+            <div class="stat-value" id="stat-img">0</div>
+            <div class="stat-sub">道有圖片</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">建立日期</div>
+            <div class="stat-value" style="font-size:1.1rem;" id="stat-date">—</div>
+            <div class="stat-sub">最新新增</div>
+          </div>
+        </div>
+
+        <div class="page-header">
+          <h2>題目管理</h2>
+          <button class="btn btn-primary" onclick="openModal()">+ 新增題目</button>
+        </div>
+        <div id="questions-alert"></div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th>題目說明</th>
+                <th style="width:76px;">截圖</th>
+                <th style="width:90px;">題組</th>
+                <th style="width:72px; text-align:center;">答案</th>
+                <th style="width:60px; text-align:center;">選填</th>
+                <th style="width:110px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="questions-tbody">
+              <tr><td colspan="7" style="padding:0;">
+                <div class="empty-state"><div class="icon">⏳</div><p>載入中...</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 題組管理 -->
+      <div id="tab-groups" style="display:none;">
+        <div class="page-header">
+          <h2>題組管理</h2>
+          <button class="btn btn-primary" onclick="openGroupModal()">+ 新增題組</button>
+        </div>
+        <div id="groups-alert"></div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th>題組名稱</th>
+                <th>說明</th>
+                <th style="width:80px; text-align:center;">題目數</th>
+                <th style="width:120px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="groups-tbody">
+              <tr><td colspan="5" style="padding:0;">
+                <div class="empty-state"><div class="icon">⏳</div><p>載入中...</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- 題組題目列表 -->
+        <div id="group-questions-panel" style="display:none; margin-top:24px;">
+          <div class="page-header" style="margin-bottom:12px;">
+            <h3 id="group-panel-title" style="font-size:1rem; font-weight:700;">題組題目</h3>
+            <button class="btn btn-sm btn-outline" onclick="closeGroupPanel()">收起</button>
+          </div>
+          <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:12px;">以下題目屬於此題組。可在「題目管理」中編輯題目的題組欄位來調整。</p>
+          <div class="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:44px;">#</th>
+                  <th>題目說明</th>
+                  <th style="width:76px;">截圖</th>
+                  <th style="width:72px; text-align:center;">答案</th>
+                </tr>
+              </thead>
+              <tbody id="group-questions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 考試管理 -->
+      <div id="tab-exams" style="display:none;">
+        <div class="page-header">
+          <h2>考試管理</h2>
+          <button class="btn btn-primary" onclick="openExamModal()">+ 新增考試</button>
+        </div>
+        <div id="exams-alert"></div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th>考試名稱</th>
+                <th>說明</th>
+                <th style="width:70px; text-align:center;">狀態</th>
+                <th style="width:70px; text-align:center;">題組數</th>
+                <th style="width:160px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="exams-tbody">
+              <tr><td colspan="6" style="padding:0;">
+                <div class="empty-state"><div class="icon">⏳</div><p>載入中...</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 學生成績 -->
+      <div id="tab-scores" style="display:none;">
+        <div class="page-header">
+          <h2>學生成績</h2>
+          <button class="btn btn-outline btn-sm" onclick="loadScores()">↻ 重新整理</button>
+        </div>
+        <div style="margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+          <label style="font-size:.88rem; font-weight:600; color:var(--text-muted);">篩選考試：</label>
+          <select id="score-exam-filter" class="form-control" style="width:auto; min-width:180px;" onchange="loadScores()">
+            <option value="">全部考試</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>學生姓名</th>
+                <th style="width:80px; text-align:center;">作答題數</th>
+                <th style="width:80px; text-align:center;">答對</th>
+                <th style="width:160px;">得分</th>
+                <th>最後作答</th>
+                <th style="width:70px;">詳情</th>
+              </tr>
+            </thead>
+            <tbody id="scores-tbody">
+              <tr><td colspan="6" style="padding:0;">
+                <div class="empty-state"><div class="icon">📊</div><h3>尚無成績</h3><p>學生作答後會顯示在這裡</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══ 新增/編輯題目 Modal ═══ -->
+<div class="modal-overlay" id="question-modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">新增題目</h3>
+      <button class="modal-close" onclick="closeModal()" aria-label="關閉">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-alert"></div>
+      <input type="hidden" id="edit-id">
+
+      <!-- 題型選擇 -->
+      <div class="form-group">
+        <label>題目類型</label>
+        <div style="display:flex; gap:8px;">
+          <div class="type-btn active" id="type-choice" onclick="setQType('choice')">選擇題</div>
+          <div class="type-btn" id="type-fill" onclick="setQType('fill')">填充題</div>
+        </div>
+        <input type="hidden" id="q-type" value="choice">
+      </div>
+
+      <!-- 題目內容（圖片） -->
+      <div class="form-group">
+        <label>
+          題目內容
+          <button type="button" class="toggle-input-btn" id="toggle-q-mode" onclick="toggleQMode()">切換為文字輸入</button>
+        </label>
+        <div class="paste-hint">
+          💡 <kbd>Ctrl+V</kbd> / <kbd>⌘V</kbd> 可直接貼上截圖（焦點在此彈窗時有效）
+        </div>
+        <!-- 圖片模式（預設） -->
+        <div id="q-image-mode">
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="q-image" accept="image/*" onchange="handleFileSelect(this, 'q')">
+            <div id="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <div class="upload-text">點擊選擇 或 拖放 / 貼上截圖</div>
+              <div class="upload-hint">JPG、PNG、GIF，最大 10MB</div>
+            </div>
+            <img id="img-preview" class="upload-preview" alt="截圖預覽">
+          </div>
+          <div id="current-image" style="margin-top:6px; font-size:.8rem; color:var(--text-muted);"></div>
+        </div>
+        <!-- 文字模式 -->
+        <div id="q-text-mode" style="display:none;">
+          <textarea id="q-question-text" class="form-control" rows="4" placeholder="輸入題目內容…" style="resize:vertical; line-height:1.7;"></textarea>
+        </div>
+      </div>
+
+      <!-- 題號/說明 -->
+      <div class="form-group">
+        <label>題目標題 <span style="color:var(--text-muted); font-weight:500; text-transform:none;">（選填，如「第25題 娃娃迷宮」）</span></label>
+        <input type="text" id="q-title" class="form-control" placeholder="選填">
+      </div>
+
+      <!-- 題組 -->
+      <div class="form-group">
+        <label>所屬題組 <span style="color:var(--text-muted); font-weight:500; text-transform:none;">（選填）</span></label>
+        <select id="q-group" class="form-control">
+          <option value="">-- 不指定題組 --</option>
+        </select>
+      </div>
+
+      <!-- 選擇題：選項 + 答案按鈕 -->
+      <div id="section-choice">
+        <div class="form-group">
+          <label>選項內容 <span style="color:var(--text-muted); font-weight:500; text-transform:none;">（截圖含選項時預設 A/B/C/D 即可，E/F 留空則不顯示）</span></label>
+          <div class="options-grid">
+            <div class="option-field"><div class="opt-letter">A</div><input type="text" id="q-opt-a" class="form-control" placeholder="A"></div>
+            <div class="option-field"><div class="opt-letter">B</div><input type="text" id="q-opt-b" class="form-control" placeholder="B"></div>
+            <div class="option-field"><div class="opt-letter">C</div><input type="text" id="q-opt-c" class="form-control" placeholder="C"></div>
+            <div class="option-field"><div class="opt-letter">D</div><input type="text" id="q-opt-d" class="form-control" placeholder="D"></div>
+            <div class="option-field"><div class="opt-letter">E</div><input type="text" id="q-opt-e" class="form-control" placeholder="E（選填）"></div>
+            <div class="option-field"><div class="opt-letter">F</div><input type="text" id="q-opt-f" class="form-control" placeholder="F（選填）"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>正確答案 <span class="required">*</span></label>
+          <div class="answer-choices">
+            <div class="answer-btn" id="ans-A" onclick="selectAnswer('A')">A</div>
+            <div class="answer-btn" id="ans-B" onclick="selectAnswer('B')">B</div>
+            <div class="answer-btn" id="ans-C" onclick="selectAnswer('C')">C</div>
+            <div class="answer-btn" id="ans-D" onclick="selectAnswer('D')">D</div>
+            <div class="answer-btn" id="ans-E" onclick="selectAnswer('E')">E</div>
+            <div class="answer-btn" id="ans-F" onclick="selectAnswer('F')">F</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 填充題：正確答案文字 -->
+      <div id="section-fill" style="display:none;">
+        <div class="form-group">
+          <label>正確答案 <span class="required">*</span></label>
+          <input type="text" id="q-fill-answer" class="form-control" placeholder="輸入正確答案（學生作答時不區分大小寫）">
+        </div>
+      </div>
+
+      <input type="hidden" id="q-correct" value="">
+
+      <!-- 詳解 -->
+      <div class="form-group" style="margin-top:4px;">
+        <label>
+          詳解 <span style="color:var(--text-muted); font-weight:500; text-transform:none;">（選填，學生作答後顯示）</span>
+          <button type="button" class="toggle-input-btn" id="toggle-exp-mode" onclick="toggleExpMode()">切換為文字輸入</button>
+        </label>
+        <!-- 詳解圖片模式（預設，支援多張） -->
+        <div id="exp-image-mode">
+          <!-- 已加入的詳解圖片列表 -->
+          <div id="exp-images-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;"></div>
+          <!-- 上傳區（可持續新增） -->
+          <div class="upload-zone" id="exp-upload-zone" style="min-height:80px;">
+            <input type="file" id="exp-image" accept="image/*" multiple onchange="handleExpMultiFiles(this)">
+            <div id="exp-upload-placeholder">
+              <div class="upload-icon">🖼️</div>
+              <div class="upload-text">貼上 / 點擊 / 拖放新增詳解截圖（可多張）</div>
+              <div class="upload-hint">JPG、PNG、GIF，最大 10MB，不限張數</div>
+            </div>
+          </div>
+        </div>
+        <!-- 詳解文字模式 -->
+        <div id="exp-text-mode" style="display:none;">
+          <textarea id="q-explanation" class="form-control" rows="4" placeholder="貼上或輸入解題說明…" style="resize:vertical; line-height:1.7;"></textarea>
+        </div>
+      </div>
+
+      <!-- 選填 toggle -->
+      <div class="toggle-row" onclick="toggleOptional()">
+        <div>
+          <div class="toggle-row-label">設為選填題</div>
+          <div class="toggle-row-sub">學生可跳過，不計入必答分數</div>
+        </div>
+        <div class="toggle" id="optional-toggle"></div>
+      </div>
+
+      <input type="hidden" id="q-optional" value="0">
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveQuestion()">儲存題目</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 新增/編輯題組 Modal ═══ -->
+<div class="modal-overlay" id="group-modal" onclick="if(event.target===this)closeGroupModal()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <h3 id="group-modal-title">新增題組</h3>
+      <button class="modal-close" onclick="closeGroupModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="group-modal-alert"></div>
+      <input type="hidden" id="group-edit-id">
+      <div class="form-group">
+        <label>題組名稱 <span class="required">*</span></label>
+        <input type="text" id="group-name" class="form-control" placeholder="如「娃娃迷宮」、「程式設計」">
+      </div>
+      <div class="form-group">
+        <label>說明 <span style="color:var(--text-muted); font-weight:500;">（選填）</span></label>
+        <input type="text" id="group-desc" class="form-control" placeholder="選填">
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-outline" onclick="closeGroupModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveGroup()">儲存題組</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 新增/編輯考試 Modal ═══ -->
+<div class="modal-overlay" id="exam-modal" onclick="if(event.target===this)closeExamModal()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <h3 id="exam-modal-title">新增考試</h3>
+      <button class="modal-close" onclick="closeExamModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="exam-modal-alert"></div>
+      <input type="hidden" id="exam-edit-id">
+      <div class="form-group">
+        <label>考試名稱 <span class="required">*</span></label>
+        <input type="text" id="exam-name" class="form-control" placeholder="如「第一次月考」">
+      </div>
+      <div class="form-group">
+        <label>說明 <span style="color:var(--text-muted); font-weight:500;">（選填）</span></label>
+        <input type="text" id="exam-desc" class="form-control" placeholder="選填">
+      </div>
+      <div class="form-group">
+        <label>包含題組 <span style="color:var(--text-muted); font-weight:500;">（可多選，依序排列）</span></label>
+        <div id="exam-groups-checkboxes" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding:10px; background:rgba(0,0,0,.04); border-radius:8px; border:1px solid var(--border);">
+          <p style="color:var(--text-muted); font-size:.85rem;">載入題組中...</p>
+        </div>
+      </div>
+      <div class="toggle-row" onclick="toggleExamActive()">
+        <div>
+          <div class="toggle-row-label">開放學生選擇此考試</div>
+          <div class="toggle-row-sub">關閉後學生端不顯示此考試</div>
+        </div>
+        <div class="toggle on" id="exam-active-toggle"></div>
+      </div>
+      <input type="hidden" id="exam-is-active" value="1">
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+        <button type="button" class="btn btn-outline" onclick="closeExamModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveExam()">儲存考試</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 學生詳情 Modal ═══ -->
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="detail-title">作答詳情</h3>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detail-content"></div>
+  </div>
+</div>
+
+<!-- 浮動新增題目按鈕 -->
+<button id="fab-add" onclick="openModal()" style="display:none; position:fixed; bottom:28px; right:28px; z-index:100; width:56px; height:56px; border-radius:50%; border:none; background:var(--primary); color:white; font-size:1.8rem; font-weight:300; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.3); transition:transform .15s, box-shadow .15s; line-height:1;" title="新增題目">+</button>
+
+<script>
+// ─── 初始化 ───
+window.addEventListener('DOMContentLoaded', async () => {
+  const res = await fetch('/api/admin/check');
+  const data = await res.json();
+  if (data.isAdmin) showAdmin();
+  setupPaste();
+  setupDragDrop();
+  setupFab();
+});
+
+// ─── 登入 ───
+async function doLogin() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  try {
+    const res = await fetch('/api/admin/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    if (res.ok) { showAdmin(); }
+    else { showLoginAlert((await res.json()).error || '登入失敗'); }
+  } catch { showLoginAlert('連線失敗'); }
+}
+
+function showLoginAlert(msg) {
+  document.getElementById('login-alert').innerHTML =
+    `<div class="alert alert-error">⚠️ ${esc(msg)}</div>`;
+}
+
+async function doLogout() {
+  await fetch('/api/admin/logout', { method:'POST' });
+  location.reload();
+}
+
+function showAdmin() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('admin-page').style.display = 'block';
+  loadQuestions();
+  loadAllGroupsForModal();
+}
+
+// ─── Tab ───
+function showTab(tab, el) {
+  document.querySelectorAll('.admin-sidebar a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  ['questions','groups','exams','scores'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab==='scores') { loadExamsForFilter(); loadScores(); }
+  if (tab==='groups') loadGroups();
+  if (tab==='exams') loadExams();
+  return false;
+}
+
+// ─── 題目管理 ───
+let allGroups = [];
+
+async function loadAllGroupsForModal() {
+  const res = await fetch('/api/admin/groups');
+  allGroups = await res.json();
+  const sel = document.getElementById('q-group');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- 不指定題組 --</option>' +
+    allGroups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+  sel.value = current;
+}
+
+async function loadQuestions() {
+  const res = await fetch('/api/admin/questions');
+  const qs = await res.json();
+  const tbody = document.getElementById('questions-tbody');
+
+  if (qs.length) {
+    document.getElementById('q-stats').style.display = 'grid';
+    document.getElementById('stat-total').textContent = qs.length;
+    document.getElementById('stat-img').textContent = qs.filter(q=>q.image_path).length;
+    const latest = qs[qs.length-1];
+    document.getElementById('stat-date').textContent = latest ? formatDate(latest.created_at).split(' ')[0] : '—';
+  } else {
+    document.getElementById('q-stats').style.display = 'none';
+  }
+
+  if (!qs.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="padding:0;">
+      <div class="empty-state">
+        <div class="icon">📝</div>
+        <h3>尚無題目</h3>
+        <p>點擊「新增題目」開始建立</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = qs.map(q => `
+    <tr>
+      <td style="color:var(--gray-400); font-weight:700; font-size:.82rem;">#${q.id}</td>
+      <td>
+        <div style="font-weight:600; color:var(--gray-800); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          ${q.title ? esc(q.title) : '<span style="color:var(--gray-400)">（無說明）</span>'}
+        </div>
+      </td>
+      <td>
+        ${q.image_path
+          ? `<img src="${q.image_path}" style="width:64px; height:42px; object-fit:cover; border-radius:6px; cursor:pointer; border:1px solid var(--gray-200);" onclick="window.open('${q.image_path}')" title="點擊放大">`
+          : '<span style="color:var(--gray-300); font-size:.8rem;">無</span>'}
+      </td>
+      <td style="font-size:.82rem; color:var(--text-muted);">
+        ${q.group_name ? `<span style="background:rgba(136,192,208,.2); color:var(--primary); border-radius:4px; padding:2px 6px; font-weight:600;">${esc(q.group_name)}</span>` : '<span style="color:var(--gray-300);">—</span>'}
+      </td>
+      <td style="text-align:center;">
+        <span class="${q.is_optional ? 'badge-answer-optional' : 'badge-answer'}">${q.correct_answer}</span>
+      </td>
+      <td style="text-align:center;">
+        ${q.is_optional ? '<span class="badge badge-optional">選填</span>' : '<span style="color:var(--text-muted);font-size:.8rem;">必答</span>'}
+      </td>
+      <td>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-sm btn-outline" onclick="editQuestion(${q.id})">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteQuestion(${q.id})">刪除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── 題型 / 輸入模式切換 ───
+function setQType(type) {
+  document.getElementById('q-type').value = type;
+  document.getElementById('type-choice').classList.toggle('active', type==='choice');
+  document.getElementById('type-fill').classList.toggle('active', type==='fill');
+  document.getElementById('section-choice').style.display = type==='choice' ? 'block' : 'none';
+  document.getElementById('section-fill').style.display  = type==='fill'   ? 'block' : 'none';
+  document.getElementById('q-correct').value = '';
+  ['A','B','C','D','E','F'].forEach(o => document.getElementById('ans-'+o)?.classList.remove('selected'));
+}
+
+let qTextMode = false;
+function toggleQMode() {
+  qTextMode = !qTextMode;
+  document.getElementById('q-image-mode').style.display = qTextMode ? 'none' : 'block';
+  document.getElementById('q-text-mode').style.display  = qTextMode ? 'block' : 'none';
+  document.getElementById('toggle-q-mode').textContent  = qTextMode ? '切換為截圖上傳' : '切換為文字輸入';
+}
+
+let expTextMode = false;
+function toggleExpMode() {
+  expTextMode = !expTextMode;
+  document.getElementById('exp-image-mode').style.display = expTextMode ? 'none' : 'block';
+  document.getElementById('exp-text-mode').style.display  = expTextMode ? 'block' : 'none';
+  document.getElementById('toggle-exp-mode').textContent  = expTextMode ? '切換為截圖上傳' : '切換為文字輸入';
+}
+
+// ─── Modal 開關 ───
+function openModal() {
+  loadAllGroupsForModal();
+  resetModal();
+  document.getElementById('modal-title').textContent = '新增題目';
+  document.getElementById('q-opt-a').value = 'A';
+  document.getElementById('q-opt-b').value = 'B';
+  document.getElementById('q-opt-c').value = 'C';
+  document.getElementById('q-opt-d').value = 'D';
+  document.getElementById('q-opt-e').value = '';
+  document.getElementById('q-opt-f').value = '';
+  document.getElementById('question-modal').classList.add('show');
+}
+
+async function editQuestion(id) {
+  await loadAllGroupsForModal();
+  const res = await fetch('/api/admin/questions');
+  const q = (await res.json()).find(x=>x.id===id);
+  if (!q) return;
+  resetModal();
+  document.getElementById('modal-title').textContent = '編輯題目';
+  document.getElementById('edit-id').value = id;
+  document.getElementById('q-title').value = q.title||'';
+  document.getElementById('q-group').value = q.group_id||'';
+
+  const qtype = q.question_type || 'choice';
+  setQType(qtype);
+
+  if (q.question_text) {
+    qTextMode = false; toggleQMode();
+    document.getElementById('q-question-text').value = q.question_text;
+  }
+
+  if (qtype === 'choice') {
+    document.getElementById('q-opt-a').value = q.option_a;
+    document.getElementById('q-opt-b').value = q.option_b;
+    document.getElementById('q-opt-c').value = q.option_c;
+    document.getElementById('q-opt-d').value = q.option_d;
+    document.getElementById('q-opt-e').value = q.option_e || '';
+    document.getElementById('q-opt-f').value = q.option_f || '';
+    selectAnswer(q.correct_answer);
+  } else {
+    document.getElementById('q-fill-answer').value = q.correct_answer || '';
+    document.getElementById('q-correct').value = q.correct_answer || '';
+  }
+
+  if (q.explanation) {
+    expTextMode = false; toggleExpMode();
+    document.getElementById('q-explanation').value = q.explanation;
+  }
+
+  document.getElementById('q-optional').value = q.is_optional ? '1' : '0';
+  document.getElementById('optional-toggle').classList.toggle('on', !!q.is_optional);
+
+  if (q.image_path) {
+    showImgPreview(q.image_path, 'q');
+    document.getElementById('current-image').innerHTML =
+      `目前截圖：<a href="${q.image_path}" target="_blank" style="color:var(--primary);">查看</a>（貼上或選擇可替換）`;
+  }
+  // 載入現有詳解圖片（相容舊格式）
+  if (q.explanation_image) {
+    try {
+      const arr = JSON.parse(q.explanation_image);
+      existingExpUrls = Array.isArray(arr) ? arr : [q.explanation_image];
+    } catch { existingExpUrls = [q.explanation_image]; }
+    renderExpImagesList();
+  }
+
+  document.getElementById('question-modal').classList.add('show');
+}
+
+function selectAnswer(opt) {
+  ['A','B','C','D','E','F'].forEach(o => document.getElementById('ans-'+o)?.classList.remove('selected'));
+  document.getElementById('ans-'+opt)?.classList.add('selected');
+  document.getElementById('q-correct').value = opt;
+}
+
+function resetModal() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('q-title').value = '';
+  document.getElementById('q-group').value = '';
+  document.getElementById('q-opt-a').value = '';
+  document.getElementById('q-opt-b').value = '';
+  document.getElementById('q-opt-c').value = '';
+  document.getElementById('q-opt-d').value = '';
+  document.getElementById('q-opt-e').value = '';
+  document.getElementById('q-opt-f').value = '';
+  document.getElementById('q-fill-answer').value = '';
+  document.getElementById('q-correct').value = '';
+  document.getElementById('q-question-text').value = '';
+  ['A','B','C','D','E','F'].forEach(o => document.getElementById('ans-'+o)?.classList.remove('selected'));
+  document.getElementById('modal-alert').innerHTML = '';
+  document.getElementById('current-image').textContent = '';
+  document.getElementById('q-optional').value = '0';
+  document.getElementById('optional-toggle').classList.remove('on');
+  if (qTextMode) toggleQMode();
+  if (expTextMode) toggleExpMode();
+  setQType('choice');
+  clearImgPreview('q');
+  pendingQFile = null;
+  pendingExpFiles = [];
+  existingExpUrls = [];
+  document.getElementById('exp-images-list').innerHTML = '';
+}
+
+function toggleOptional() {
+  const hidden = document.getElementById('q-optional');
+  const toggle = document.getElementById('optional-toggle');
+  const isOn = hidden.value === '1';
+  hidden.value = isOn ? '0' : '1';
+  toggle.classList.toggle('on', !isOn);
+}
+
+function closeModal() { document.getElementById('question-modal').classList.remove('show'); }
+function handleOverlayClick(e) { if (e.target.id==='question-modal') closeModal(); }
+
+// ─── 圖片處理 ───
+let pendingQFile = null;
+// 多圖詳解
+let pendingExpFiles = [];   // 新上傳的 File 物件陣列
+let existingExpUrls = [];   // 已在伺服器上的圖片 URL 陣列
+
+function handleFileSelect(input, target) {
+  const file = input.files[0];
+  if (file) setImgFile(file, target);
+}
+
+function setImgFile(file, target) {
+  if (!file.type.startsWith('image/')) { showModalAlert('請選擇圖片檔案', 'error'); return; }
+  if (target === 'q') {
+    const reader = new FileReader();
+    reader.onload = e => showImgPreview(e.target.result, 'q');
+    reader.readAsDataURL(file);
+    pendingQFile = file;
+  } else {
+    addExpImage(file);
+  }
+}
+
+// 多檔選擇（file input 的 onchange）
+function handleExpMultiFiles(input) {
+  for (const file of input.files) {
+    if (file.type.startsWith('image/')) addExpImage(file);
+  }
+  input.value = '';
+}
+
+// 新增一張詳解圖到列表
+function addExpImage(file) {
+  pendingExpFiles.push(file);
+  const reader = new FileReader();
+  reader.onload = e => renderExpImagesList();
+  reader.readAsDataURL(file);
+}
+
+// 渲染詳解圖片列表（已存在 + 待上傳）
+function renderExpImagesList() {
+  const container = document.getElementById('exp-images-list');
+  let html = '';
+  // 已在伺服器上的圖片
+  existingExpUrls.forEach((url, i) => {
+    html += `<div style="position:relative; display:inline-block;">
+      <img src="${url}" style="width:100px; height:68px; object-fit:cover; border-radius:6px; border:1px solid var(--border);">
+      <button type="button" onclick="removeExistingExpImage(${i})" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; border:none; background:var(--danger); color:white; font-size:.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+    </div>`;
+  });
+  // 待上傳的圖片（用 FileReader 預覽）
+  pendingExpFiles.forEach((file, i) => {
+    const id = 'exp-pending-' + i;
+    html += `<div style="position:relative; display:inline-block;" id="${id}">
+      <img style="width:100px; height:68px; object-fit:cover; border-radius:6px; border:1px solid var(--border); background:var(--surface);">
+      <button type="button" onclick="removePendingExpImage(${i})" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; border:none; background:var(--danger); color:white; font-size:.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+    </div>`;
+  });
+  container.innerHTML = html;
+  // 載入待上傳圖片預覽
+  pendingExpFiles.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const el = document.getElementById('exp-pending-' + i);
+      if (el) el.querySelector('img').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeExistingExpImage(idx) {
+  existingExpUrls.splice(idx, 1);
+  renderExpImagesList();
+}
+
+function removePendingExpImage(idx) {
+  pendingExpFiles.splice(idx, 1);
+  renderExpImagesList();
+}
+
+function showImgPreview(url, target) {
+  if (target !== 'q') return;
+  document.getElementById('img-preview').src = url;
+  document.getElementById('img-preview').style.display = 'block';
+  document.getElementById('upload-placeholder').style.display = 'none';
+  document.getElementById('upload-zone').classList.add('has-image');
+}
+
+function clearImgPreview(target) {
+  if (target === 'q') {
+    document.getElementById('img-preview').src = '';
+    document.getElementById('img-preview').style.display = 'none';
+    document.getElementById('upload-placeholder').style.display = 'block';
+    document.getElementById('upload-zone').classList.remove('has-image');
+    document.getElementById('q-image').value = '';
+  }
+}
+
+let pasteTarget = 'q';
+function setupPaste() {
+  document.getElementById('exp-upload-zone').addEventListener('mouseenter', () => pasteTarget = 'exp');
+  document.getElementById('upload-zone').addEventListener('mouseenter', () => pasteTarget = 'q');
+  document.getElementById('exp-text-mode').addEventListener('mouseenter', () => pasteTarget = 'exp');
+
+  document.addEventListener('paste', e => {
+    if (!document.getElementById('question-modal').classList.contains('show')) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        const active = document.activeElement;
+        const target = (active && active.id === 'q-explanation') || pasteTarget === 'exp' ? 'exp' : 'q';
+        if (file) { setImgFile(file, target); break; }
+      }
+    }
+  });
+}
+
+function setupDragDrop() {
+  // 題目圖片
+  const qZone = document.getElementById('upload-zone');
+  qZone.addEventListener('dragover', e => { e.preventDefault(); qZone.classList.add('drag-over'); });
+  qZone.addEventListener('dragleave', () => qZone.classList.remove('drag-over'));
+  qZone.addEventListener('drop', e => {
+    e.preventDefault(); qZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setImgFile(file, 'q');
+  });
+  // 詳解圖片（多張）
+  const expZone = document.getElementById('exp-upload-zone');
+  expZone.addEventListener('dragover', e => { e.preventDefault(); expZone.classList.add('drag-over'); });
+  expZone.addEventListener('dragleave', () => expZone.classList.remove('drag-over'));
+  expZone.addEventListener('drop', e => {
+    e.preventDefault(); expZone.classList.remove('drag-over');
+    for (const file of e.dataTransfer.files) {
+      if (file.type.startsWith('image/')) addExpImage(file);
+    }
+  });
+}
+
+// ─── 儲存題目 ───
+async function saveQuestion() {
+  const id = document.getElementById('edit-id').value;
+  const qtype = document.getElementById('q-type').value;
+
+  let correctVal;
+  if (qtype === 'fill') {
+    correctVal = document.getElementById('q-fill-answer').value.trim();
+    document.getElementById('q-correct').value = correctVal;
+  } else {
+    correctVal = document.getElementById('q-correct').value;
+  }
+
+  if (!correctVal) {
+    showModalAlert(qtype === 'fill' ? '請輸入正確答案' : '請點選正確答案（A / B / C / D）', 'error');
+    document.getElementById('modal-alert').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('question_type', qtype);
+  formData.append('title', document.getElementById('q-title').value);
+  formData.append('question_text', document.getElementById('q-question-text').value);
+  formData.append('option_a', document.getElementById('q-opt-a').value || 'A');
+  formData.append('option_b', document.getElementById('q-opt-b').value || 'B');
+  formData.append('option_c', document.getElementById('q-opt-c').value || 'C');
+  formData.append('option_d', document.getElementById('q-opt-d').value || 'D');
+  formData.append('option_e', document.getElementById('q-opt-e').value || '');
+  formData.append('option_f', document.getElementById('q-opt-f').value || '');
+  formData.append('correct_answer', correctVal);
+  formData.append('is_optional', document.getElementById('q-optional').value);
+  formData.append('explanation', expTextMode ? document.getElementById('q-explanation').value : '');
+  formData.append('group_id', document.getElementById('q-group').value);
+  if (pendingQFile) formData.append('image', pendingQFile);
+  // 多張詳解圖片
+  formData.append('existing_exp_images', JSON.stringify(existingExpUrls));
+  pendingExpFiles.forEach(f => formData.append('explanation_image', f));
+
+  try {
+    const url = id ? `/api/admin/questions/${id}` : '/api/admin/questions';
+    const res = await fetch(url, { method: id?'PUT':'POST', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      closeModal();
+      showAlert('questions-alert', '✓ ' + data.message, 'success');
+      loadQuestions();
+    } else { showModalAlert(data.error, 'error'); }
+  } catch { showModalAlert('儲存失敗，請稍後再試', 'error'); }
+}
+
+async function deleteQuestion(id) {
+  if (!confirm('確定要刪除這道題目？相關的作答記錄也會一併刪除。')) return;
+  const res = await fetch(`/api/admin/questions/${id}`, { method:'DELETE' });
+  const data = await res.json();
+  if (res.ok) { showAlert('questions-alert', '✓ 題目已刪除', 'success'); loadQuestions(); }
+  else alert(data.error);
+}
+
+// ─── 題組管理 ───
+async function loadGroups() {
+  const res = await fetch('/api/admin/groups');
+  allGroups = await res.json();
+  const tbody = document.getElementById('groups-tbody');
+  if (!allGroups.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:0;">
+      <div class="empty-state"><div class="icon">📁</div><h3>尚無題組</h3><p>點擊「新增題組」建立第一個題組</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allGroups.map(g => `
+    <tr>
+      <td style="color:var(--gray-400); font-weight:700; font-size:.82rem;">#${g.id}</td>
+      <td>
+        <a href="#" style="font-weight:700; color:var(--primary); text-decoration:none;" onclick="viewGroupQuestions(${g.id},'${esc(g.name)}')">${esc(g.name)}</a>
+      </td>
+      <td style="font-size:.85rem; color:var(--text-muted);">${g.description ? esc(g.description) : '—'}</td>
+      <td style="text-align:center; font-weight:700;">${g.question_count}</td>
+      <td>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-sm btn-outline" onclick="editGroup(${g.id},'${esc(g.name)}','${esc(g.description||'')}')">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteGroup(${g.id})">刪除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function viewGroupQuestions(groupId, groupName) {
+  const res = await fetch(`/api/admin/groups/${groupId}/questions`);
+  const qs = await res.json();
+  document.getElementById('group-panel-title').textContent = `「${groupName}」題組題目`;
+  const tbody = document.getElementById('group-questions-tbody');
+  if (!qs.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="padding:0;">
+      <div class="empty-state" style="padding:24px;"><p>此題組尚無題目，請到題目管理中設定題組。</p></div>
+    </td></tr>`;
+  } else {
+    tbody.innerHTML = qs.map(q => `
+      <tr>
+        <td style="color:var(--gray-400); font-weight:700; font-size:.82rem;">#${q.id}</td>
+        <td>${q.title ? esc(q.title) : '<span style="color:var(--gray-400)">（無說明）</span>'}</td>
+        <td>${q.image_path ? `<img src="${q.image_path}" style="width:56px;height:36px;object-fit:cover;border-radius:4px;">` : '—'}</td>
+        <td style="text-align:center;"><span class="badge-answer">${q.correct_answer}</span></td>
+      </tr>
+    `).join('');
+  }
+  document.getElementById('group-questions-panel').style.display = 'block';
+  document.getElementById('group-questions-panel').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function closeGroupPanel() {
+  document.getElementById('group-questions-panel').style.display = 'none';
+}
+
+function openGroupModal() {
+  document.getElementById('group-edit-id').value = '';
+  document.getElementById('group-name').value = '';
+  document.getElementById('group-desc').value = '';
+  document.getElementById('group-modal-title').textContent = '新增題組';
+  document.getElementById('group-modal-alert').innerHTML = '';
+  document.getElementById('group-modal').classList.add('show');
+}
+
+function editGroup(id, name, desc) {
+  document.getElementById('group-edit-id').value = id;
+  document.getElementById('group-name').value = name;
+  document.getElementById('group-desc').value = desc;
+  document.getElementById('group-modal-title').textContent = '編輯題組';
+  document.getElementById('group-modal-alert').innerHTML = '';
+  document.getElementById('group-modal').classList.add('show');
+}
+
+function closeGroupModal() { document.getElementById('group-modal').classList.remove('show'); }
+
+async function saveGroup() {
+  const id = document.getElementById('group-edit-id').value;
+  const name = document.getElementById('group-name').value.trim();
+  const desc = document.getElementById('group-desc').value.trim();
+  if (!name) { document.getElementById('group-modal-alert').innerHTML = '<div class="alert alert-error">請輸入題組名稱</div>'; return; }
+  const url = id ? `/api/admin/groups/${id}` : '/api/admin/groups';
+  const res = await fetch(url, { method: id?'PUT':'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, description:desc}) });
+  if (res.ok) {
+    closeGroupModal();
+    showAlert('groups-alert', '✓ 題組已儲存', 'success');
+    loadGroups();
+    loadAllGroupsForModal();
+  } else {
+    const data = await res.json();
+    document.getElementById('group-modal-alert').innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+  }
+}
+
+async function deleteGroup(id) {
+  if (!confirm('確定刪除此題組？題組內的題目不會刪除，但會失去題組關聯。')) return;
+  const res = await fetch(`/api/admin/groups/${id}`, { method:'DELETE' });
+  if (res.ok) { showAlert('groups-alert', '✓ 題組已刪除', 'success'); loadGroups(); closeGroupPanel(); }
+}
+
+// ─── 考試管理 ───
+async function loadExams() {
+  const res = await fetch('/api/admin/exams');
+  const exams = await res.json();
+  const tbody = document.getElementById('exams-tbody');
+  if (!exams.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:0;">
+      <div class="empty-state"><div class="icon">📝</div><h3>尚無考試</h3><p>點擊「新增考試」建立第一場考試</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = exams.map(e => `
+    <tr>
+      <td style="color:var(--gray-400); font-weight:700; font-size:.82rem;">#${e.id}</td>
+      <td style="font-weight:700;">${esc(e.name)}</td>
+      <td style="font-size:.85rem; color:var(--text-muted);">${e.description ? esc(e.description) : '—'}</td>
+      <td style="text-align:center;">
+        <span style="font-size:.78rem; font-weight:700; padding:3px 8px; border-radius:20px; background:${e.is_active?'rgba(163,190,140,.2)':'rgba(0,0,0,.07)'}; color:${e.is_active?'var(--success)':'var(--text-muted)'};">${e.is_active?'開放':'關閉'}</span>
+      </td>
+      <td style="text-align:center; font-weight:700;">${e.group_count}</td>
+      <td>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-sm btn-outline" onclick="editExam(${e.id})">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteExam(${e.id})">刪除</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function openExamModal() {
+  document.getElementById('exam-edit-id').value = '';
+  document.getElementById('exam-name').value = '';
+  document.getElementById('exam-desc').value = '';
+  document.getElementById('exam-is-active').value = '1';
+  document.getElementById('exam-active-toggle').classList.add('on');
+  document.getElementById('exam-modal-title').textContent = '新增考試';
+  document.getElementById('exam-modal-alert').innerHTML = '';
+  await renderExamGroupCheckboxes([]);
+  document.getElementById('exam-modal').classList.add('show');
+}
+
+async function editExam(id) {
+  const [examRes, groupRes] = await Promise.all([
+    fetch('/api/admin/exams'),
+    fetch(`/api/admin/exams/${id}/groups`)
+  ]);
+  const exams = await examRes.json();
+  const exam = exams.find(e => e.id === id);
+  const examGroups = await groupRes.json();
+  if (!exam) return;
+
+  document.getElementById('exam-edit-id').value = id;
+  document.getElementById('exam-name').value = exam.name;
+  document.getElementById('exam-desc').value = exam.description || '';
+  document.getElementById('exam-is-active').value = exam.is_active ? '1' : '0';
+  document.getElementById('exam-active-toggle').classList.toggle('on', !!exam.is_active);
+  document.getElementById('exam-modal-title').textContent = '編輯考試';
+  document.getElementById('exam-modal-alert').innerHTML = '';
+  await renderExamGroupCheckboxes(examGroups.map(g => g.id));
+  document.getElementById('exam-modal').classList.add('show');
+}
+
+async function renderExamGroupCheckboxes(selectedIds) {
+  const res = await fetch('/api/admin/groups');
+  const groups = await res.json();
+  const container = document.getElementById('exam-groups-checkboxes');
+  if (!groups.length) {
+    container.innerHTML = '<p style="color:var(--text-muted); font-size:.85rem;">尚無題組，請先新增題組再設定考試。</p>';
+    return;
+  }
+  container.innerHTML = groups.map(g => `
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:4px 0;">
+      <input type="checkbox" name="exam-group" value="${g.id}" ${selectedIds.includes(g.id)?'checked':''} style="width:16px;height:16px;accent-color:var(--primary);">
+      <span style="font-weight:600;">${esc(g.name)}</span>
+      <span style="color:var(--text-muted); font-size:.82rem;">（${g.question_count} 題）</span>
+    </label>
+  `).join('');
+}
+
+function toggleExamActive() {
+  const hidden = document.getElementById('exam-is-active');
+  const toggle = document.getElementById('exam-active-toggle');
+  const isOn = hidden.value === '1';
+  hidden.value = isOn ? '0' : '1';
+  toggle.classList.toggle('on', !isOn);
+}
+
+function closeExamModal() { document.getElementById('exam-modal').classList.remove('show'); }
+
+async function saveExam() {
+  const id = document.getElementById('exam-edit-id').value;
+  const name = document.getElementById('exam-name').value.trim();
+  const desc = document.getElementById('exam-desc').value.trim();
+  const is_active = document.getElementById('exam-is-active').value;
+  if (!name) { document.getElementById('exam-modal-alert').innerHTML = '<div class="alert alert-error">請輸入考試名稱</div>'; return; }
+
+  // 儲存考試
+  const url = id ? `/api/admin/exams/${id}` : '/api/admin/exams';
+  const res = await fetch(url, { method: id?'PUT':'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, description:desc, is_active}) });
+  if (!res.ok) {
+    const data = await res.json();
+    document.getElementById('exam-modal-alert').innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+    return;
+  }
+
+  const examId = id || (await res.json()).id;
+
+  // 儲存題組
+  const checked = [...document.querySelectorAll('input[name="exam-group"]:checked')].map(cb => parseInt(cb.value));
+  await fetch(`/api/admin/exams/${examId}/groups`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ group_ids: checked })
+  });
+
+  closeExamModal();
+  showAlert('exams-alert', '✓ 考試已儲存', 'success');
+  loadExams();
+}
+
+async function deleteExam(id) {
+  if (!confirm('確定刪除此考試？考試內容設定將清除，但題組和題目不受影響。')) return;
+  const res = await fetch(`/api/admin/exams/${id}`, { method:'DELETE' });
+  if (res.ok) { showAlert('exams-alert', '✓ 考試已刪除', 'success'); loadExams(); }
+}
+
+// ─── 學生成績 ───
+async function loadExamsForFilter() {
+  const res = await fetch('/api/admin/exams');
+  const exams = await res.json();
+  const sel = document.getElementById('score-exam-filter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">全部考試</option>' +
+    exams.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  sel.value = current;
+}
+
+async function loadScores() {
+  const examId = document.getElementById('score-exam-filter')?.value || '';
+  const url = '/api/admin/scores' + (examId ? `?exam_id=${examId}` : '');
+  const res = await fetch(url);
+  const scores = await res.json();
+  const tbody = document.getElementById('scores-tbody');
+  if (!scores.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:0;">
+      <div class="empty-state"><div class="icon">📊</div><h3>尚無成績</h3><p>學生作答後會顯示在這裡</p></div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = scores.map(s => `
+    <tr>
+      <td style="font-weight:700;">${esc(s.student_name)}</td>
+      <td style="text-align:center;">${s.total}</td>
+      <td style="text-align:center;"><span style="font-weight:700; color:var(--success);">${s.correct}</span></td>
+      <td>
+        <div class="progress-wrap">
+          <span style="font-weight:900; min-width:38px; font-size:1rem; color:${s.score>=60?'var(--success)':'var(--danger)'};">${s.score}分</span>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${s.score}%"></div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:.83rem; color:var(--text-muted);">${formatDate(s.last_submitted)}</td>
+      <td>
+        <button class="btn btn-sm btn-outline" onclick="showDetail('${esc(s.student_name)}')">查看</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function showDetail(name) {
+  const examId = document.getElementById('score-exam-filter')?.value || '';
+  const url = `/api/admin/scores/${encodeURIComponent(name)}` + (examId ? `?exam_id=${examId}` : '');
+  const res = await fetch(url);
+  const details = await res.json();
+  document.getElementById('detail-title').textContent = name + ' 的作答詳情';
+  const c = document.getElementById('detail-content');
+  if (!details.length) { c.innerHTML = '<p style="text-align:center;padding:24px;color:var(--text-muted);">無記錄</p>'; }
+  else {
+    // 依題組分組
+    const grouped = {};
+    const groupOrder = [];
+    details.forEach(d => {
+      const key = d.group_name || '（未分題組）';
+      if (!grouped[key]) { grouped[key] = []; groupOrder.push(key); }
+      grouped[key].push(d);
+    });
+    c.innerHTML = groupOrder.map(groupName => {
+      const items = grouped[groupName];
+      const correct = items.filter(d=>d.is_correct).length;
+      return `
+        <div style="margin-bottom:20px;">
+          <div style="font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border);">
+            📁 ${esc(groupName)} &nbsp;
+            <span style="font-weight:600; color:${correct===items.length?'var(--success)':'var(--danger)'};">${correct} / ${items.length} 答對</span>
+          </div>
+          ${items.map(d => `
+            <div class="result-item ${d.is_correct?'correct':'wrong'}" style="margin-bottom:8px;">
+              <div class="result-icon">${d.is_correct?'✓':'✗'}</div>
+              <div>
+                <h4>題目 #${d.question_id}${d.title?'：'+esc(d.title):''}</h4>
+                ${d.image_path?`<img src="${d.image_path}" style="max-height:70px;border-radius:6px;margin:6px 0;display:block;">`: ''}
+                <p>作答：<strong>${esc(d.selected_answer)}</strong>
+                ${!d.is_correct?` 　正確：<strong style="color:var(--success)">${esc(d.correct_answer)}</strong>`:''}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('detail-modal').classList.add('show');
+}
+function closeDetailModal() { document.getElementById('detail-modal').classList.remove('show'); }
+
+// ─── 工具 ───
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${type==='success'?'success':'error'}">${esc(msg)}</div>`;
+  setTimeout(()=>{ el.innerHTML=''; }, 4000);
+}
+function showModalAlert(msg, type) { showAlert('modal-alert', msg, type); }
+
+function formatDate(s) {
+  if (!s) return '—';
+  return new Date(s).toLocaleString('zh-TW', { hour12:false });
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── 浮動新增按鈕 ───
+function setupFab() {
+  const fab = document.getElementById('fab-add');
+  const content = document.querySelector('.admin-content');
+  if (!content) return;
+  content.addEventListener('scroll', () => {
+    const tabQ = document.getElementById('tab-questions');
+    const isQTab = tabQ && tabQ.style.display !== 'none';
+    fab.style.display = isQTab && content.scrollTop > 120 ? 'block' : 'none';
+  });
+  window.addEventListener('scroll', () => {
+    const tabQ = document.getElementById('tab-questions');
+    const isQTab = tabQ && tabQ.style.display !== 'none';
+    fab.style.display = isQTab && window.scrollY > 120 ? 'block' : 'none';
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeModal(); closeDetailModal(); closeGroupModal(); closeExamModal(); }
+  if (e.key==='Enter' && document.getElementById('login-page').style.display!=='none') doLogin();
+});
+</script>
+</body>
+</html>

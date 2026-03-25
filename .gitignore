@@ -1,0 +1,4 @@
+node_modules/
+quiz.db
+uploads/
+.DS_Store
