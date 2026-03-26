@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Supabase Storage 公開 URL 前綴
-const STORAGE_URL = `${process.env.SUPABASE_URL || 'https://wrgsrmvctzfbmzbbyeuj.supabase.co'}/storage/v1/object/public/images`;
+const STORAGE_URL = `${process.env.SUPABASE_URL}/storage/v1/object/public/images`;
 
 // 解析 explanation_image 欄位（向下相容單一字串 + JSON 陣列）
 function parseExpImages(val) {
