@@ -192,13 +192,22 @@ app.post('/api/submit', async (req, res) => {
       if (error) throw error;
     }
 
-    const scoreBase = requiredTotal > 0 ? requiredTotal : answers.length;
-    const scoreCorrect = requiredTotal > 0 ? requiredCorrect : correct;
+    // 查詢該考試的全部必答題數作為分母
+    let totalRequired = 0;
+    if (exam_id) {
+      const { data: egs } = await supabase.from('exam_groups').select('group_id').eq('exam_id', exam_id);
+      const gids = (egs || []).map(g => g.group_id);
+      if (gids.length) {
+        const { count } = await supabase.from('questions').select('id', { count: 'exact', head: true }).in('group_id', gids).eq('is_optional', 0);
+        totalRequired = count || 0;
+      }
+    }
+    if (!totalRequired) totalRequired = requiredTotal || answers.length;
 
     res.json({
       student_name, total: answers.length,
-      required_total: requiredTotal, correct, required_correct: requiredCorrect,
-      score: scoreBase > 0 ? Math.round((scoreCorrect / scoreBase) * 100) : 0,
+      required_total: totalRequired, correct, required_correct: requiredCorrect,
+      score: totalRequired > 0 ? Math.round((requiredCorrect / totalRequired) * 100) : 0,
       results
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
