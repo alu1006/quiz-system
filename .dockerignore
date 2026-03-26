@@ -1,0 +1,7 @@
+node_modules
+.git
+.agents
+quiz.db
+uploads
+.env
+.DS_Store
