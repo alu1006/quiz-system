@@ -182,14 +182,25 @@
       <div id="tab-scores" style="display:none;">
         <div class="page-header">
           <h2>學生成績</h2>
-          <button class="btn btn-outline btn-sm" onclick="loadScores()">↻ 重新整理</button>
+          <button class="btn btn-outline btn-sm" onclick="loadScores(); loadErrorStats();">↻ 重新整理</button>
         </div>
         <div style="margin-bottom:16px; display:flex; align-items:center; gap:10px;">
           <label style="font-size:.88rem; font-weight:600; color:var(--text-muted);">篩選考試：</label>
-          <select id="score-exam-filter" class="form-control" style="width:auto; min-width:180px;" onchange="loadScores()">
+          <select id="score-exam-filter" class="form-control" style="width:auto; min-width:180px;" onchange="loadScores(); loadErrorStats();">
             <option value="">全部考試</option>
           </select>
         </div>
+
+        <!-- 題目錯誤率分析 -->
+        <div style="margin-bottom:24px;">
+          <h3 style="font-size:.85rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">📊 題目錯誤率排行</h3>
+          <div id="error-stats-container">
+            <p style="color:var(--text-muted); font-size:.88rem;">載入中...</p>
+          </div>
+        </div>
+
+        <!-- 成績列表 -->
+        <h3 style="font-size:.85rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">👥 學生成績</h3>
         <div class="table-card">
           <table>
             <thead>
@@ -199,7 +210,7 @@
                 <th style="width:80px; text-align:center;">答對</th>
                 <th style="width:160px;">得分</th>
                 <th>最後作答</th>
-                <th style="width:70px;">詳情</th>
+                <th style="width:120px;">操作</th>
               </tr>
             </thead>
             <tbody id="scores-tbody">
@@ -488,7 +499,7 @@ function showTab(tab, el) {
   ['questions','groups','exams','scores'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
-  if (tab==='scores') { loadExamsForFilter(); loadScores(); }
+  if (tab==='scores') { loadExamsForFilter(); loadScores(); loadErrorStats(); }
   if (tab==='groups') loadGroups();
   if (tab==='exams') loadExams();
   return false;
@@ -1172,10 +1183,69 @@ async function loadScores() {
       </td>
       <td style="font-size:.83rem; color:var(--text-muted);">${formatDate(s.last_submitted)}</td>
       <td>
-        <button class="btn btn-sm btn-outline" onclick="showDetail('${esc(s.student_name)}')">查看</button>
+        <div style="display:flex; gap:4px;">
+          <button class="btn btn-sm btn-outline" onclick="showDetail('${esc(s.student_name)}')">查看</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteScore('${esc(s.student_name)}')">刪除</button>
+        </div>
       </td>
     </tr>
   `).join('');
+}
+
+// 刪除學生成績
+async function deleteScore(name) {
+  if (!confirm(`確定要刪除「${name}」的所有成績嗎？此操作無法復原。`)) return;
+  const examId = document.getElementById('score-exam-filter')?.value || '';
+  const url = `/api/admin/scores/${encodeURIComponent(name)}` + (examId ? `?exam_id=${examId}` : '');
+  const res = await fetch(url, { method: 'DELETE' });
+  const data = await res.json();
+  if (res.ok) {
+    loadScores();
+    loadErrorStats();
+  } else {
+    alert(data.error || '刪除失敗');
+  }
+}
+
+// 題目錯誤率統計
+async function loadErrorStats() {
+  const examId = document.getElementById('score-exam-filter')?.value || '';
+  const url = '/api/admin/stats/errors' + (examId ? `?exam_id=${examId}` : '');
+  const res = await fetch(url);
+  const stats = await res.json();
+  const c = document.getElementById('error-stats-container');
+  if (!stats.length) {
+    c.innerHTML = '<p style="color:var(--text-muted); font-size:.88rem;">尚無作答資料</p>';
+    return;
+  }
+  c.innerHTML = `<div class="table-card"><table>
+    <thead><tr>
+      <th>題目</th>
+      <th style="width:80px; text-align:center;">作答人數</th>
+      <th style="width:80px; text-align:center;">答錯</th>
+      <th style="width:160px;">錯誤率</th>
+    </tr></thead>
+    <tbody>${stats.map(s => {
+      const barColor = s.error_rate >= 70 ? 'var(--danger)' : s.error_rate >= 40 ? 'var(--nord12)' : 'var(--success)';
+      return `<tr>
+        <td>
+          <span style="font-weight:700;">#${s.question_id}</span>
+          ${s.title ? `<span style="color:var(--text-muted);"> ${esc(s.title)}</span>` : ''}
+          ${s.group_name ? `<span style="font-size:.75rem; color:var(--text-muted);"> (${esc(s.group_name)})</span>` : ''}
+        </td>
+        <td style="text-align:center;">${s.total}</td>
+        <td style="text-align:center;"><span style="font-weight:700; color:var(--danger);">${s.wrong}</span></td>
+        <td>
+          <div class="progress-wrap">
+            <span style="font-weight:900; min-width:38px; font-size:.95rem; color:${barColor};">${s.error_rate}%</span>
+            <div class="progress-bar" style="max-width:100px;">
+              <div class="progress-fill" style="width:${s.error_rate}%; background:${barColor};"></div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
 }
 
 async function showDetail(name) {

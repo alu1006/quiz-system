@@ -551,6 +551,66 @@ app.get('/api/admin/scores/:name', requireAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// 題目錯誤率統計（依考試）
+app.get('/api/admin/stats/errors', requireAdmin, async (req, res) => {
+  try {
+    const { exam_id } = req.query;
+    let query = supabase.from('answers').select('question_id, is_correct');
+    if (exam_id) query = query.eq('exam_id', exam_id);
+    const { data } = await query;
+
+    // 聚合每題的答對/答錯次數
+    const map = {};
+    (data || []).forEach(a => {
+      if (!map[a.question_id]) map[a.question_id] = { question_id: a.question_id, total: 0, wrong: 0 };
+      map[a.question_id].total++;
+      if (!a.is_correct) map[a.question_id].wrong++;
+    });
+
+    const stats = Object.values(map).map(s => ({
+      ...s, error_rate: s.total > 0 ? Math.round(s.wrong * 100 / s.total) : 0
+    }));
+    stats.sort((a, b) => b.error_rate - a.error_rate || b.wrong - a.wrong);
+
+    // 補上題目資訊
+    const qIds = stats.map(s => s.question_id);
+    if (qIds.length) {
+      const { data: questions } = await supabase.from('questions')
+        .select('id, title, image_path, group_id').in('id', qIds);
+      const qMap = {};
+      (questions || []).forEach(q => { qMap[q.id] = q; });
+
+      const groupIds = [...new Set((questions || []).map(q => q.group_id).filter(Boolean))];
+      const groupNames = {};
+      if (groupIds.length) {
+        const { data: groups } = await supabase.from('question_groups').select('id, name').in('id', groupIds);
+        (groups || []).forEach(g => { groupNames[g.id] = g.name; });
+      }
+
+      stats.forEach(s => {
+        const q = qMap[s.question_id] || {};
+        s.title = q.title || null;
+        s.image_path = q.image_path || null;
+        s.group_name = groupNames[q.group_id] || null;
+      });
+    }
+
+    res.json(stats);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 刪除學生成績
+app.delete('/api/admin/scores/:name', requireAdmin, async (req, res) => {
+  try {
+    const { exam_id } = req.query;
+    let query = supabase.from('answers').delete().eq('student_name', req.params.name);
+    if (exam_id) query = query.eq('exam_id', exam_id);
+    const { error } = await query;
+    if (error) throw error;
+    res.json({ message: `已刪除 ${req.params.name} 的成績` });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // 後台路由（SPA redirect）
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
