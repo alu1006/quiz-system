@@ -3,3 +3,4 @@ quiz.db
 uploads/
 .DS_Store
 .env
+.agents/

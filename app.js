@@ -2,11 +2,13 @@ const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const db = require('./database');
+const supabase = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Supabase Storage 公開 URL 前綴
+const STORAGE_URL = `${process.env.SUPABASE_URL || 'https://wrgsrmvctzfbmzbbyeuj.supabase.co'}/storage/v1/object/public/images`;
 
 // 解析 explanation_image 欄位（向下相容單一字串 + JSON 陣列）
 function parseExpImages(val) {
@@ -19,37 +21,41 @@ function parseExpImages(val) {
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-// 確保 uploads 目錄存在（支援環境變數指定路徑）
-const uploadsDir = process.env.UPLOADS_DIR
-  ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-// 設定 multer 檔案上傳
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `question_${Date.now()}${ext}`);
-  }
-});
+// multer 暫存到記憶體，再上傳到 Supabase Storage
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp/;
     cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
   },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 const uploadFields = upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'explanation_image', maxCount: 20 }
 ]);
 
+// 上傳檔案到 Supabase Storage
+async function uploadToStorage(file, folder) {
+  const ext = path.extname(file.originalname);
+  const filename = `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+  const { error } = await supabase.storage.from('images').upload(filename, file.buffer, {
+    contentType: file.mimetype
+  });
+  if (error) throw error;
+  return `${STORAGE_URL}/${filename}`;
+}
+
+// 從 Supabase Storage 刪除檔案
+async function deleteFromStorage(url) {
+  if (!url || !url.includes('/storage/')) return;
+  const filePath = url.split('/images/')[1];
+  if (filePath) await supabase.storage.from('images').remove([filePath]);
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadsDir));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'quiz-secret-key-2024',
   resave: false,
@@ -60,70 +66,101 @@ app.use(session({
 // ─── 學生 API ───────────────────────────────────────────────
 
 // 取得開放中的考試列表
-app.get('/api/exams', (req, res) => {
-  const exams = db.prepare(`
-    SELECT e.id, e.name, e.description,
-      COUNT(DISTINCT eg.group_id) as group_count,
-      COUNT(DISTINCT q.id) as question_count
-    FROM exams e
-    LEFT JOIN exam_groups eg ON eg.exam_id = e.id
-    LEFT JOIN questions q ON q.group_id = eg.group_id
-    WHERE e.is_active = 1
-    GROUP BY e.id
-    ORDER BY e.id DESC
-  `).all();
-  res.json(exams);
+app.get('/api/exams', async (req, res) => {
+  try {
+    // 先取得考試
+    const { data: exams, error } = await supabase
+      .from('exams').select('id, name, description').eq('is_active', 1).order('id', { ascending: false });
+    if (error) throw error;
+
+    // 對每個考試計算題目數
+    for (const exam of exams) {
+      const { data: groups } = await supabase
+        .from('exam_groups').select('group_id').eq('exam_id', exam.id);
+      const groupIds = (groups || []).map(g => g.group_id);
+      if (groupIds.length) {
+        const { count } = await supabase
+          .from('questions').select('id', { count: 'exact', head: true }).in('group_id', groupIds);
+        exam.question_count = count || 0;
+      } else {
+        exam.question_count = 0;
+      }
+    }
+    res.json(exams);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 取得某考試的所有題目（含題組資訊，不含正確答案）
-app.get('/api/exams/:id/questions', (req, res) => {
-  const exam = db.prepare('SELECT * FROM exams WHERE id = ? AND is_active = 1').get(req.params.id);
-  if (!exam) return res.status(404).json({ error: '考試不存在或已關閉' });
+// 取得某考試的所有題目
+app.get('/api/exams/:id/questions', async (req, res) => {
+  try {
+    const { data: exam } = await supabase
+      .from('exams').select('*').eq('id', req.params.id).eq('is_active', 1).single();
+    if (!exam) return res.status(404).json({ error: '考試不存在或已關閉' });
 
-  const questions = db.prepare(`
-    SELECT q.id, q.title, q.question_text, q.question_type, q.image_path,
-           q.option_a, q.option_b, q.option_c, q.option_d, q.option_e, q.option_f, q.is_optional,
-           q.group_id, g.name as group_name,
-           eg.sort_order as group_order
-    FROM exam_groups eg
-    JOIN question_groups g ON g.id = eg.group_id
-    JOIN questions q ON q.group_id = eg.group_id
-    WHERE eg.exam_id = ?
-    ORDER BY eg.sort_order ASC, q.id ASC
-  `).all(req.params.id);
-  res.json(questions);
+    const { data: egs } = await supabase
+      .from('exam_groups').select('group_id, sort_order').eq('exam_id', req.params.id).order('sort_order');
+
+    if (!egs || !egs.length) return res.json([]);
+
+    const groupIds = egs.map(g => g.group_id);
+    const groupOrder = {};
+    egs.forEach(g => { groupOrder[g.group_id] = g.sort_order; });
+
+    const { data: groups } = await supabase
+      .from('question_groups').select('id, name').in('id', groupIds);
+    const groupNames = {};
+    (groups || []).forEach(g => { groupNames[g.id] = g.name; });
+
+    const { data: questions } = await supabase
+      .from('questions')
+      .select('id, title, question_text, question_type, image_path, option_a, option_b, option_c, option_d, option_e, option_f, is_optional, group_id')
+      .in('group_id', groupIds)
+      .order('id');
+
+    const result = (questions || []).map(q => ({
+      ...q,
+      group_name: groupNames[q.group_id] || null,
+      group_order: groupOrder[q.group_id] || 0
+    }));
+    result.sort((a, b) => a.group_order - b.group_order || a.id - b.id);
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 取得所有題目（不含正確答案，舊版相容）
-app.get('/api/questions', (req, res) => {
-  const questions = db.prepare(`
-    SELECT id, title, question_text, question_type, image_path, option_a, option_b, option_c, option_d, option_e, option_f, is_optional
-    FROM questions ORDER BY id ASC
-  `).all();
-  res.json(questions);
+// 取得所有題目（舊版相容）
+app.get('/api/questions', async (req, res) => {
+  try {
+    const { data } = await supabase
+      .from('questions')
+      .select('id, title, question_text, question_type, image_path, option_a, option_b, option_c, option_d, option_e, option_f, is_optional')
+      .order('id');
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 提交作答
-app.post('/api/submit', (req, res) => {
+app.post('/api/submit', async (req, res) => {
   const { student_name, answers, exam_id } = req.body;
   if (!student_name || !answers || !Array.isArray(answers)) {
     return res.status(400).json({ error: '資料不完整' });
   }
 
-  const insert = db.prepare(`
-    INSERT INTO answers (student_name, question_id, selected_answer, is_correct, exam_id)
-    VALUES (?, ?, ?, ?, ?)
-  `);
+  try {
+    const qIds = answers.map(a => a.question_id);
+    const { data: qList } = await supabase
+      .from('questions')
+      .select('id, correct_answer, is_optional, explanation, explanation_image, question_type')
+      .in('id', qIds);
 
-  let correct = 0;
-  const results = [];
+    const qMap = {};
+    (qList || []).forEach(q => { qMap[q.id] = q; });
 
-  let requiredTotal = 0;
-  let requiredCorrect = 0;
+    let correct = 0, requiredTotal = 0, requiredCorrect = 0;
+    const results = [];
+    const inserts = [];
 
-  const insertMany = db.transaction(() => {
     for (const ans of answers) {
-      const q = db.prepare('SELECT correct_answer, is_optional, explanation, explanation_image, question_type FROM questions WHERE id = ?').get(ans.question_id);
+      const q = qMap[ans.question_id];
       if (!q) continue;
       let isCorrect;
       if (q.question_type === 'fill') {
@@ -136,34 +173,35 @@ app.post('/api/submit', (req, res) => {
         requiredTotal++;
         if (isCorrect) requiredCorrect++;
       }
-      insert.run(student_name, ans.question_id, ans.selected_answer, isCorrect, exam_id || null);
+      inserts.push({
+        student_name, question_id: ans.question_id,
+        selected_answer: ans.selected_answer, is_correct: isCorrect,
+        exam_id: exam_id || null
+      });
       results.push({
-        question_id: ans.question_id,
-        selected: ans.selected_answer,
-        correct_answer: q.correct_answer,
-        is_correct: isCorrect === 1,
-        is_optional: !!q.is_optional,
-        explanation: q.explanation || null,
+        question_id: ans.question_id, selected: ans.selected_answer,
+        correct_answer: q.correct_answer, is_correct: isCorrect === 1,
+        is_optional: !!q.is_optional, explanation: q.explanation || null,
         explanation_images: parseExpImages(q.explanation_image),
         question_type: q.question_type || 'choice'
       });
     }
-  });
 
-  insertMany();
+    if (inserts.length) {
+      const { error } = await supabase.from('answers').insert(inserts);
+      if (error) throw error;
+    }
 
-  const scoreBase = requiredTotal > 0 ? requiredTotal : answers.length;
-  const scoreCorrect = requiredTotal > 0 ? requiredCorrect : correct;
+    const scoreBase = requiredTotal > 0 ? requiredTotal : answers.length;
+    const scoreCorrect = requiredTotal > 0 ? requiredCorrect : correct;
 
-  res.json({
-    student_name,
-    total: answers.length,
-    required_total: requiredTotal,
-    correct,
-    required_correct: requiredCorrect,
-    score: scoreBase > 0 ? Math.round((scoreCorrect / scoreBase) * 100) : 0,
-    results
-  });
+    res.json({
+      student_name, total: answers.length,
+      required_total: requiredTotal, correct, required_correct: requiredCorrect,
+      score: scoreBase > 0 ? Math.round((scoreCorrect / scoreBase) * 100) : 0,
+      results
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── 後台 API ───────────────────────────────────────────────
@@ -173,7 +211,6 @@ const requireAdmin = (req, res, next) => {
   res.status(401).json({ error: '請先登入' });
 };
 
-// 後台登入
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
@@ -184,290 +221,325 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
-// 後台登出
 app.post('/api/admin/logout', (req, res) => {
   req.session.destroy();
   res.json({ success: true });
 });
 
-// 確認登入狀態
 app.get('/api/admin/check', (req, res) => {
   res.json({ isAdmin: !!req.session.isAdmin });
 });
 
 // 取得所有題目（含正確答案）
-app.get('/api/admin/questions', requireAdmin, (req, res) => {
-  const questions = db.prepare(`
-    SELECT q.*, g.name as group_name
-    FROM questions q
-    LEFT JOIN question_groups g ON g.id = q.group_id
-    ORDER BY q.id ASC
-  `).all();
-  res.json(questions);
+app.get('/api/admin/questions', requireAdmin, async (req, res) => {
+  try {
+    const { data: questions } = await supabase
+      .from('questions').select('*').order('id');
+
+    // 取得題組名稱
+    const groupIds = [...new Set((questions || []).map(q => q.group_id).filter(Boolean))];
+    const groupNames = {};
+    if (groupIds.length) {
+      const { data: groups } = await supabase.from('question_groups').select('id, name').in('id', groupIds);
+      (groups || []).forEach(g => { groupNames[g.id] = g.name; });
+    }
+
+    res.json((questions || []).map(q => ({ ...q, group_name: groupNames[q.group_id] || null })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 新增題目
-app.post('/api/admin/questions', requireAdmin, uploadFields, (req, res) => {
-  const { title, question_text, question_type, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, is_optional, explanation, group_id } = req.body;
-  if (!correct_answer) return res.status(400).json({ error: '請設定正確答案' });
-  const qtype = question_type || 'choice';
-  const image_path = req.files?.image?.[0] ? `/uploads/${req.files.image[0].filename}` : null;
-  // 多張詳解圖片：合併新上傳 + 保留的舊圖
-  const newExpFiles = (req.files?.explanation_image || []).map(f => `/uploads/${f.filename}`);
-  const existingExp = req.body.existing_exp_images ? JSON.parse(req.body.existing_exp_images) : [];
-  const allExpImages = [...existingExp, ...newExpFiles];
-  const exp_image = allExpImages.length ? JSON.stringify(allExpImages) : null;
-  const ans = qtype === 'choice' ? correct_answer.toUpperCase() : correct_answer;
-  const result = db.prepare(`
-    INSERT INTO questions (title, question_text, question_type, image_path, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, is_optional, explanation, explanation_image, group_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(title || null, question_text || null, qtype, image_path,
-         option_a || 'A', option_b || 'B', option_c || 'C', option_d || 'D',
-         option_e || null, option_f || null,
-         ans, is_optional === '1' ? 1 : 0, explanation || null, exp_image,
-         group_id ? parseInt(group_id) : null);
-  res.json({ id: result.lastInsertRowid, message: '題目新增成功' });
+app.post('/api/admin/questions', requireAdmin, uploadFields, async (req, res) => {
+  try {
+    const { title, question_text, question_type, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, is_optional, explanation, group_id } = req.body;
+    if (!correct_answer) return res.status(400).json({ error: '請設定正確答案' });
+    const qtype = question_type || 'choice';
+
+    let image_path = null;
+    if (req.files?.image?.[0]) {
+      image_path = await uploadToStorage(req.files.image[0], 'questions');
+    }
+
+    const newExpFiles = [];
+    for (const f of (req.files?.explanation_image || [])) {
+      newExpFiles.push(await uploadToStorage(f, 'explanations'));
+    }
+    const existingExp = req.body.existing_exp_images ? JSON.parse(req.body.existing_exp_images) : [];
+    const allExpImages = [...existingExp, ...newExpFiles];
+    const exp_image = allExpImages.length ? JSON.stringify(allExpImages) : null;
+
+    const ans = qtype === 'choice' ? correct_answer.toUpperCase() : correct_answer;
+
+    const { data, error } = await supabase.from('questions').insert({
+      title: title || null, question_text: question_text || null, question_type: qtype,
+      image_path, option_a: option_a || 'A', option_b: option_b || 'B',
+      option_c: option_c || 'C', option_d: option_d || 'D',
+      option_e: option_e || null, option_f: option_f || null,
+      correct_answer: ans, is_optional: is_optional === '1' ? 1 : 0,
+      explanation: explanation || null, explanation_image: exp_image,
+      group_id: group_id ? parseInt(group_id) : null
+    }).select('id').single();
+    if (error) throw error;
+
+    res.json({ id: data.id, message: '題目新增成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 編輯題目
-app.put('/api/admin/questions/:id', requireAdmin, uploadFields, (req, res) => {
-  const { id } = req.params;
-  const { title, question_text, question_type, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, is_optional, explanation, group_id } = req.body;
-  const existing = db.prepare('SELECT * FROM questions WHERE id = ?').get(id);
-  if (!existing) return res.status(404).json({ error: '題目不存在' });
+app.put('/api/admin/questions/:id', requireAdmin, uploadFields, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, question_text, question_type, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, is_optional, explanation, group_id } = req.body;
 
-  const qtype = question_type || existing.question_type || 'choice';
+    const { data: existing } = await supabase.from('questions').select('*').eq('id', id).single();
+    if (!existing) return res.status(404).json({ error: '題目不存在' });
 
-  let image_path = existing.image_path;
-  if (req.files?.image?.[0]) {
-    if (existing.image_path) { const p = path.join(__dirname, existing.image_path); if (fs.existsSync(p)) fs.unlinkSync(p); }
-    image_path = `/uploads/${req.files.image[0].filename}`;
-  }
+    const qtype = question_type || existing.question_type || 'choice';
 
-  // 多張詳解圖片：保留的舊圖 + 新上傳
-  const existingExpImages = parseExpImages(existing.explanation_image);
-  const keptExp = req.body.existing_exp_images ? JSON.parse(req.body.existing_exp_images) : existingExpImages;
-  const newExpFiles = (req.files?.explanation_image || []).map(f => `/uploads/${f.filename}`);
-  const allExpImages = [...keptExp, ...newExpFiles];
-  // 清理被移除的舊檔案
-  const removedImages = existingExpImages.filter(img => !keptExp.includes(img));
-  removedImages.forEach(img => { const p = path.join(__dirname, img); if (fs.existsSync(p)) fs.unlinkSync(p); });
-  const exp_image = allExpImages.length ? JSON.stringify(allExpImages) : null;
+    let image_path = existing.image_path;
+    if (req.files?.image?.[0]) {
+      if (existing.image_path) await deleteFromStorage(existing.image_path);
+      image_path = await uploadToStorage(req.files.image[0], 'questions');
+    }
 
-  const ans = correct_answer ? (qtype === 'choice' ? correct_answer.toUpperCase() : correct_answer) : existing.correct_answer;
-  const gid = group_id !== undefined ? (group_id ? parseInt(group_id) : null) : existing.group_id;
+    const existingExpImages = parseExpImages(existing.explanation_image);
+    const keptExp = req.body.existing_exp_images ? JSON.parse(req.body.existing_exp_images) : existingExpImages;
+    const newExpFiles = [];
+    for (const f of (req.files?.explanation_image || [])) {
+      newExpFiles.push(await uploadToStorage(f, 'explanations'));
+    }
+    const allExpImages = [...keptExp, ...newExpFiles];
+    const removedImages = existingExpImages.filter(img => !keptExp.includes(img));
+    for (const img of removedImages) await deleteFromStorage(img);
+    const exp_image = allExpImages.length ? JSON.stringify(allExpImages) : null;
 
-  db.prepare(`
-    UPDATE questions SET title=?, question_text=?, question_type=?, image_path=?, option_a=?, option_b=?, option_c=?, option_d=?, option_e=?, option_f=?, correct_answer=?, is_optional=?, explanation=?, explanation_image=?, group_id=?
-    WHERE id=?
-  `).run(title || null, question_text || null, qtype, image_path,
-         option_a || 'A', option_b || 'B', option_c || 'C', option_d || 'D',
-         option_e || null, option_f || null,
-         ans, is_optional === '1' ? 1 : 0, explanation || null, exp_image, gid, id);
+    const ans = correct_answer ? (qtype === 'choice' ? correct_answer.toUpperCase() : correct_answer) : existing.correct_answer;
+    const gid = group_id !== undefined ? (group_id ? parseInt(group_id) : null) : existing.group_id;
 
-  res.json({ message: '題目更新成功' });
+    const { error } = await supabase.from('questions').update({
+      title: title || null, question_text: question_text || null, question_type: qtype,
+      image_path, option_a: option_a || 'A', option_b: option_b || 'B',
+      option_c: option_c || 'C', option_d: option_d || 'D',
+      option_e: option_e || null, option_f: option_f || null,
+      correct_answer: ans, is_optional: is_optional === '1' ? 1 : 0,
+      explanation: explanation || null, explanation_image: exp_image, group_id: gid
+    }).eq('id', id);
+    if (error) throw error;
+
+    res.json({ message: '題目更新成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 刪除題目
-app.delete('/api/admin/questions/:id', requireAdmin, (req, res) => {
-  const { id } = req.params;
-  const existing = db.prepare('SELECT * FROM questions WHERE id = ?').get(id);
-  if (!existing) return res.status(404).json({ error: '題目不存在' });
-  if (existing.image_path) {
-    const imgPath = path.join(__dirname, existing.image_path);
-    if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-  }
-  // 清理多張詳解圖片
-  parseExpImages(existing.explanation_image).forEach(img => {
-    const p = path.join(__dirname, img);
-    if (fs.existsSync(p)) fs.unlinkSync(p);
-  });
-  db.prepare('DELETE FROM answers WHERE question_id = ?').run(id);
-  db.prepare('DELETE FROM questions WHERE id = ?').run(id);
-  res.json({ message: '題目刪除成功' });
+app.delete('/api/admin/questions/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: existing } = await supabase.from('questions').select('*').eq('id', id).single();
+    if (!existing) return res.status(404).json({ error: '題目不存在' });
+
+    if (existing.image_path) await deleteFromStorage(existing.image_path);
+    for (const img of parseExpImages(existing.explanation_image)) await deleteFromStorage(img);
+
+    await supabase.from('answers').delete().eq('question_id', id);
+    const { error } = await supabase.from('questions').delete().eq('id', id);
+    if (error) throw error;
+
+    res.json({ message: '題目刪除成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── 題組 API ───────────────────────────────────────────────
 
-// 取得所有題組（含題目數量）
-app.get('/api/admin/groups', requireAdmin, (req, res) => {
-  const groups = db.prepare(`
-    SELECT g.*, COUNT(q.id) as question_count
-    FROM question_groups g
-    LEFT JOIN questions q ON q.group_id = g.id
-    GROUP BY g.id
-    ORDER BY g.sort_order ASC, g.id ASC
-  `).all();
-  res.json(groups);
+app.get('/api/admin/groups', requireAdmin, async (req, res) => {
+  try {
+    const { data: groups } = await supabase.from('question_groups').select('*').order('sort_order').order('id');
+    for (const g of (groups || [])) {
+      const { count } = await supabase.from('questions').select('id', { count: 'exact', head: true }).eq('group_id', g.id);
+      g.question_count = count || 0;
+    }
+    res.json(groups || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 新增題組
-app.post('/api/admin/groups', requireAdmin, (req, res) => {
-  const { name, description } = req.body;
-  if (!name) return res.status(400).json({ error: '請輸入題組名稱' });
-  const result = db.prepare('INSERT INTO question_groups (name, description) VALUES (?, ?)').run(name, description || null);
-  res.json({ id: result.lastInsertRowid, message: '題組新增成功' });
+app.post('/api/admin/groups', requireAdmin, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ error: '請輸入題組名稱' });
+    const { data, error } = await supabase.from('question_groups')
+      .insert({ name, description: description || null }).select('id').single();
+    if (error) throw error;
+    res.json({ id: data.id, message: '題組新增成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 編輯題組
-app.put('/api/admin/groups/:id', requireAdmin, (req, res) => {
-  const { name, description } = req.body;
-  if (!name) return res.status(400).json({ error: '請輸入題組名稱' });
-  db.prepare('UPDATE question_groups SET name=?, description=? WHERE id=?').run(name, description || null, req.params.id);
-  res.json({ message: '題組更新成功' });
+app.put('/api/admin/groups/:id', requireAdmin, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ error: '請輸入題組名稱' });
+    const { error } = await supabase.from('question_groups')
+      .update({ name, description: description || null }).eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ message: '題組更新成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 刪除題組
-app.delete('/api/admin/groups/:id', requireAdmin, (req, res) => {
-  const id = req.params.id;
-  // 移除題目的題組關聯
-  db.prepare('UPDATE questions SET group_id = NULL WHERE group_id = ?').run(id);
-  // 移除考試題組關聯
-  db.prepare('DELETE FROM exam_groups WHERE group_id = ?').run(id);
-  db.prepare('DELETE FROM question_groups WHERE id = ?').run(id);
-  res.json({ message: '題組刪除成功' });
+app.delete('/api/admin/groups/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    await supabase.from('questions').update({ group_id: null }).eq('group_id', id);
+    await supabase.from('exam_groups').delete().eq('group_id', id);
+    const { error } = await supabase.from('question_groups').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ message: '題組刪除成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 取得題組內的題目
-app.get('/api/admin/groups/:id/questions', requireAdmin, (req, res) => {
-  const questions = db.prepare('SELECT * FROM questions WHERE group_id = ? ORDER BY id ASC').all(req.params.id);
-  res.json(questions);
+app.get('/api/admin/groups/:id/questions', requireAdmin, async (req, res) => {
+  try {
+    const { data } = await supabase.from('questions').select('*').eq('group_id', req.params.id).order('id');
+    res.json(data || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── 考試 API ───────────────────────────────────────────────
 
-// 取得所有考試
-app.get('/api/admin/exams', requireAdmin, (req, res) => {
-  const exams = db.prepare(`
-    SELECT e.*, COUNT(eg.id) as group_count
-    FROM exams e
-    LEFT JOIN exam_groups eg ON eg.exam_id = e.id
-    GROUP BY e.id
-    ORDER BY e.id DESC
-  `).all();
-  res.json(exams);
+app.get('/api/admin/exams', requireAdmin, async (req, res) => {
+  try {
+    const { data: exams } = await supabase.from('exams').select('*').order('id', { ascending: false });
+    for (const e of (exams || [])) {
+      const { count } = await supabase.from('exam_groups').select('id', { count: 'exact', head: true }).eq('exam_id', e.id);
+      e.group_count = count || 0;
+    }
+    res.json(exams || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 新增考試
-app.post('/api/admin/exams', requireAdmin, (req, res) => {
-  const { name, description, is_active } = req.body;
-  if (!name) return res.status(400).json({ error: '請輸入考試名稱' });
-  const result = db.prepare('INSERT INTO exams (name, description, is_active) VALUES (?, ?, ?)').run(
-    name, description || null, is_active === '0' ? 0 : 1
-  );
-  res.json({ id: result.lastInsertRowid, message: '考試新增成功' });
+app.post('/api/admin/exams', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, is_active } = req.body;
+    if (!name) return res.status(400).json({ error: '請輸入考試名稱' });
+    const { data, error } = await supabase.from('exams')
+      .insert({ name, description: description || null, is_active: is_active === '0' ? 0 : 1 })
+      .select('id').single();
+    if (error) throw error;
+    res.json({ id: data.id, message: '考試新增成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 編輯考試
-app.put('/api/admin/exams/:id', requireAdmin, (req, res) => {
-  const { name, description, is_active } = req.body;
-  if (!name) return res.status(400).json({ error: '請輸入考試名稱' });
-  db.prepare('UPDATE exams SET name=?, description=?, is_active=? WHERE id=?').run(
-    name, description || null, is_active === '0' ? 0 : 1, req.params.id
-  );
-  res.json({ message: '考試更新成功' });
+app.put('/api/admin/exams/:id', requireAdmin, async (req, res) => {
+  try {
+    const { name, description, is_active } = req.body;
+    if (!name) return res.status(400).json({ error: '請輸入考試名稱' });
+    const { error } = await supabase.from('exams')
+      .update({ name, description: description || null, is_active: is_active === '0' ? 0 : 1 })
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ message: '考試更新成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 刪除考試
-app.delete('/api/admin/exams/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM exam_groups WHERE exam_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM exams WHERE id = ?').run(req.params.id);
-  res.json({ message: '考試刪除成功' });
+app.delete('/api/admin/exams/:id', requireAdmin, async (req, res) => {
+  try {
+    await supabase.from('exam_groups').delete().eq('exam_id', req.params.id);
+    const { error } = await supabase.from('exams').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ message: '考試刪除成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 取得考試的題組列表
-app.get('/api/admin/exams/:id/groups', requireAdmin, (req, res) => {
-  const groups = db.prepare(`
-    SELECT g.id, g.name, g.description, eg.sort_order,
-      COUNT(q.id) as question_count
-    FROM exam_groups eg
-    JOIN question_groups g ON g.id = eg.group_id
-    LEFT JOIN questions q ON q.group_id = eg.group_id
-    WHERE eg.exam_id = ?
-    GROUP BY eg.id
-    ORDER BY eg.sort_order ASC
-  `).all(req.params.id);
-  res.json(groups);
+app.get('/api/admin/exams/:id/groups', requireAdmin, async (req, res) => {
+  try {
+    const { data: egs } = await supabase.from('exam_groups')
+      .select('group_id, sort_order').eq('exam_id', req.params.id).order('sort_order');
+    if (!egs || !egs.length) return res.json([]);
+
+    const groupIds = egs.map(g => g.group_id);
+    const { data: groups } = await supabase.from('question_groups').select('*').in('id', groupIds);
+
+    const result = [];
+    for (const eg of egs) {
+      const g = (groups || []).find(gr => gr.id === eg.group_id);
+      if (!g) continue;
+      const { count } = await supabase.from('questions').select('id', { count: 'exact', head: true }).eq('group_id', g.id);
+      result.push({ id: g.id, name: g.name, description: g.description, sort_order: eg.sort_order, question_count: count || 0 });
+    }
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 更新考試的題組（覆蓋式）
-app.post('/api/admin/exams/:id/groups', requireAdmin, (req, res) => {
-  const { group_ids } = req.body; // array of group_id
-  if (!Array.isArray(group_ids)) return res.status(400).json({ error: '格式錯誤' });
-  const examId = req.params.id;
-  db.prepare('DELETE FROM exam_groups WHERE exam_id = ?').run(examId);
-  const insert = db.prepare('INSERT INTO exam_groups (exam_id, group_id, sort_order) VALUES (?, ?, ?)');
-  db.transaction(() => {
-    group_ids.forEach((gid, i) => insert.run(examId, gid, i));
-  })();
-  res.json({ message: '題組更新成功' });
+app.post('/api/admin/exams/:id/groups', requireAdmin, async (req, res) => {
+  try {
+    const { group_ids } = req.body;
+    if (!Array.isArray(group_ids)) return res.status(400).json({ error: '格式錯誤' });
+    const examId = parseInt(req.params.id);
+    await supabase.from('exam_groups').delete().eq('exam_id', examId);
+    if (group_ids.length) {
+      const inserts = group_ids.map((gid, i) => ({ exam_id: examId, group_id: gid, sort_order: i }));
+      const { error } = await supabase.from('exam_groups').insert(inserts);
+      if (error) throw error;
+    }
+    res.json({ message: '題組更新成功' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── 成績 API ───────────────────────────────────────────────
 
-// 查看學生成績（支援 exam_id 篩選）
-app.get('/api/admin/scores', requireAdmin, (req, res) => {
-  const { exam_id } = req.query;
-  let query, params;
-  if (exam_id) {
-    query = `
-      SELECT
-        a.student_name,
-        COUNT(a.id) as total,
-        SUM(a.is_correct) as correct,
-        ROUND(SUM(a.is_correct) * 100.0 / COUNT(a.id)) as score,
-        MAX(a.submitted_at) as last_submitted
-      FROM answers a
-      WHERE a.exam_id = ?
-      GROUP BY a.student_name
-      ORDER BY last_submitted DESC
-    `;
-    params = [exam_id];
-  } else {
-    query = `
-      SELECT
-        a.student_name,
-        COUNT(a.id) as total,
-        SUM(a.is_correct) as correct,
-        ROUND(SUM(a.is_correct) * 100.0 / COUNT(a.id)) as score,
-        MAX(a.submitted_at) as last_submitted
-      FROM answers a
-      GROUP BY a.student_name
-      ORDER BY last_submitted DESC
-    `;
-    params = [];
-  }
-  res.json(db.prepare(query).all(...params));
+app.get('/api/admin/scores', requireAdmin, async (req, res) => {
+  try {
+    const { exam_id } = req.query;
+    let query = supabase.from('answers').select('student_name, is_correct, submitted_at, exam_id');
+    if (exam_id) query = query.eq('exam_id', exam_id);
+    const { data } = await query;
+
+    // 手動聚合
+    const map = {};
+    (data || []).forEach(a => {
+      if (!map[a.student_name]) map[a.student_name] = { student_name: a.student_name, total: 0, correct: 0, last_submitted: a.submitted_at };
+      map[a.student_name].total++;
+      if (a.is_correct) map[a.student_name].correct++;
+      if (a.submitted_at > map[a.student_name].last_submitted) map[a.student_name].last_submitted = a.submitted_at;
+    });
+
+    const result = Object.values(map).map(s => ({
+      ...s, score: s.total > 0 ? Math.round(s.correct * 100 / s.total) : 0
+    }));
+    result.sort((a, b) => b.last_submitted.localeCompare(a.last_submitted));
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 查看特定學生的詳細作答（支援 exam_id 篩選）
-app.get('/api/admin/scores/:name', requireAdmin, (req, res) => {
-  const { exam_id } = req.query;
-  let query, params;
-  if (exam_id) {
-    query = `
-      SELECT a.*, q.title, q.option_a, q.option_b, q.option_c, q.option_d, q.option_e, q.option_f, q.correct_answer, q.image_path,
-             q.group_id, g.name as group_name
-      FROM answers a
-      JOIN questions q ON a.question_id = q.id
-      LEFT JOIN question_groups g ON g.id = q.group_id
-      WHERE a.student_name = ? AND a.exam_id = ?
-      ORDER BY a.submitted_at DESC, a.question_id ASC
-    `;
-    params = [req.params.name, exam_id];
-  } else {
-    query = `
-      SELECT a.*, q.title, q.option_a, q.option_b, q.option_c, q.option_d, q.option_e, q.option_f, q.correct_answer, q.image_path,
-             q.group_id, g.name as group_name
-      FROM answers a
-      JOIN questions q ON a.question_id = q.id
-      LEFT JOIN question_groups g ON g.id = q.group_id
-      WHERE a.student_name = ?
-      ORDER BY a.submitted_at DESC, a.question_id ASC
-    `;
-    params = [req.params.name];
-  }
-  res.json(db.prepare(query).all(...params));
+app.get('/api/admin/scores/:name', requireAdmin, async (req, res) => {
+  try {
+    const { exam_id } = req.query;
+    let query = supabase.from('answers').select('*').eq('student_name', req.params.name);
+    if (exam_id) query = query.eq('exam_id', exam_id);
+    const { data: answers } = await query.order('submitted_at', { ascending: false }).order('question_id');
+
+    if (!answers || !answers.length) return res.json([]);
+
+    const qIds = [...new Set(answers.map(a => a.question_id))];
+    const { data: questions } = await supabase.from('questions')
+      .select('id, title, option_a, option_b, option_c, option_d, option_e, option_f, correct_answer, image_path, group_id')
+      .in('id', qIds);
+    const qMap = {};
+    (questions || []).forEach(q => { qMap[q.id] = q; });
+
+    const groupIds = [...new Set((questions || []).map(q => q.group_id).filter(Boolean))];
+    const groupNames = {};
+    if (groupIds.length) {
+      const { data: groups } = await supabase.from('question_groups').select('id, name').in('id', groupIds);
+      (groups || []).forEach(g => { groupNames[g.id] = g.name; });
+    }
+
+    const result = answers.map(a => {
+      const q = qMap[a.question_id] || {};
+      return { ...a, title: q.title, option_a: q.option_a, option_b: q.option_b,
+        option_c: q.option_c, option_d: q.option_d, option_e: q.option_e, option_f: q.option_f,
+        correct_answer: q.correct_answer, image_path: q.image_path,
+        group_id: q.group_id, group_name: groupNames[q.group_id] || null };
+    });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 後台路由（SPA redirect）
