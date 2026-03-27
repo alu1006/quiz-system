@@ -500,6 +500,17 @@ app.get('/api/admin/scores', requireAdmin, async (req, res) => {
     if (exam_id) query = query.eq('exam_id', exam_id);
     const { data } = await query;
 
+    // 查詢考試總必答題數
+    let examTotal = 0;
+    if (exam_id) {
+      const { data: egs } = await supabase.from('exam_groups').select('group_id').eq('exam_id', exam_id);
+      const gids = (egs || []).map(g => g.group_id);
+      if (gids.length) {
+        const { count } = await supabase.from('questions').select('id', { count: 'exact', head: true }).in('group_id', gids).eq('is_optional', 0);
+        examTotal = count || 0;
+      }
+    }
+
     // 手動聚合
     const map = {};
     (data || []).forEach(a => {
@@ -509,9 +520,10 @@ app.get('/api/admin/scores', requireAdmin, async (req, res) => {
       if (a.submitted_at > map[a.student_name].last_submitted) map[a.student_name].last_submitted = a.submitted_at;
     });
 
-    const result = Object.values(map).map(s => ({
-      ...s, score: s.total > 0 ? Math.round(s.correct * 100 / s.total) : 0
-    }));
+    const result = Object.values(map).map(s => {
+      const base = examTotal || s.total;
+      return { ...s, score: base > 0 ? Math.round(s.correct * 100 / base) : 0 };
+    });
     result.sort((a, b) => b.last_submitted.localeCompare(a.last_submitted));
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -609,6 +621,15 @@ app.delete('/api/admin/scores/:name', requireAdmin, async (req, res) => {
     if (error) throw error;
     res.json({ message: `已刪除 ${req.params.name} 的成績` });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// PDF 自學材料列表
+app.get('/api/pdfs', (req, res) => {
+  const pdfsDir = path.join(__dirname, 'public', 'pdfs');
+  const fs = require('fs');
+  if (!fs.existsSync(pdfsDir)) return res.json([]);
+  const files = fs.readdirSync(pdfsDir).filter(f => f.toLowerCase().endsWith('.pdf')).sort();
+  res.json(files.map(f => ({ name: f.replace(/\.pdf$/i, ''), url: `/pdfs/${f}` })));
 });
 
 // 後台路由（SPA redirect）

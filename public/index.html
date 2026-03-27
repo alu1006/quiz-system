@@ -3,22 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>線上作答系統</title>
+  <title>Bebras 練習系統 — 運算思維挑戰</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<!-- 歡迎頁（考試列表） -->
+<!-- 歡迎頁（Landing Page） -->
 <div id="welcome-screen">
-  <div class="hero">
-    <div class="hero-content">
-      <h1>線上作答系統</h1>
-      <p id="hero-subtitle">載入考試中...</p>
-      <div id="exam-list" style="width:100%; max-width:420px; margin-top:8px;"></div>
+  <!-- Hero -->
+  <div class="hero" style="padding:50px 20px 40px;">
+    <div class="hero-content" style="max-width:620px; margin:0 auto;">
+      <div style="font-size:2.8rem; margin-bottom:10px;">🦫</div>
+      <h1 style="font-size:2rem; letter-spacing:-.03em;">Bebras 練習系統</h1>
+      <p style="margin-bottom:12px;">運算思維挑戰 — Computational Thinking Challenge</p>
+      <a href="#exam-section" style="display:inline-block; padding:10px 28px; border-radius:9px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.92rem; text-decoration:none; transition:background .2s;">開始練習 ↓</a>
     </div>
   </div>
-  <div style="text-align:right; padding:10px 22px;">
-    <a href="/admin" style="font-size:.8rem; color:var(--nord3); text-decoration:none;">後台管理 →</a>
+
+  <!-- 介紹區 -->
+  <div style="max-width:780px; margin:0 auto; padding:40px 20px;">
+    <!-- 什麼是 Bebras -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-bottom:20px; box-shadow:var(--shadow-sm);">
+      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">🦫 什麼是 Bebras？</h2>
+      <p style="font-size:.92rem; line-height:1.8; color:var(--text-secondary);">
+        <strong>Bebras</strong>（國際運算思維挑戰）是一項源自立陶宛的國際性資訊科學競賽，每年有超過 <strong>80 個國家、數百萬學生</strong>參與。
+        Bebras 不要求任何程式設計經驗，而是透過有趣的情境題目，考驗學生的<strong>邏輯推理、問題分解、模式辨識</strong>與<strong>演算法思維</strong>能力。
+      </p>
+    </div>
+
+    <!-- 什麼是運算思維 -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-bottom:20px; box-shadow:var(--shadow-sm);">
+      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">🧠 什麼是運算思維？</h2>
+      <p style="font-size:.92rem; line-height:1.8; color:var(--text-secondary); margin-bottom:14px;">
+        <strong>運算思維（Computational Thinking）</strong>是一套解決問題的思考方法，被視為 21 世紀的核心素養。它包含四大能力：
+      </p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+        <div style="background:var(--primary-light); border:1px solid #BFD0E8; border-radius:10px; padding:16px;">
+          <div style="font-weight:800; color:var(--primary); font-size:.88rem; margin-bottom:4px;">🔍 問題拆解</div>
+          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">將複雜問題分解成可處理的小部分</div>
+        </div>
+        <div style="background:var(--success-light); border:1px solid var(--success-border); border-radius:10px; padding:16px;">
+          <div style="font-weight:800; color:var(--success); font-size:.88rem; margin-bottom:4px;">📐 模式辨識</div>
+          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">找出資料中的規律與重複結構</div>
+        </div>
+        <div style="background:var(--optional-light); border:1px solid var(--optional-border); border-radius:10px; padding:16px;">
+          <div style="font-weight:800; color:var(--optional); font-size:.88rem; margin-bottom:4px;">🎯 抽象化</div>
+          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">忽略不重要的細節，聚焦關鍵資訊</div>
+        </div>
+        <div style="background:var(--danger-light); border:1px solid var(--danger-border); border-radius:10px; padding:16px;">
+          <div style="font-weight:800; color:var(--danger); font-size:.88rem; margin-bottom:4px;">⚙️ 演算法設計</div>
+          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">設計有步驟的解決方案</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 考試列表 -->
+    <div id="exam-section" style="scroll-margin-top:20px;">
+      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:14px; display:flex; align-items:center; gap:8px;">📝 選擇練習</h2>
+      <p id="hero-subtitle" style="font-size:.88rem; color:var(--text-muted); margin-bottom:12px;">載入考試中...</p>
+      <div id="exam-list"></div>
+    </div>
+
+    <!-- 自學材料 -->
+    <div style="margin-top:32px;">
+      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:14px; display:flex; align-items:center; gap:8px;">📚 自學材料</h2>
+      <div id="pdf-materials" style="display:grid; gap:12px;">
+      </div>
+      <p style="font-size:.82rem; color:var(--text-muted); margin-top:8px;">點擊可直接開啟 PDF 檔案閱讀</p>
+    </div>
+  </div>
+
+  <div style="text-align:right; padding:10px 22px; border-top:1px solid var(--border); margin-top:20px;">
+    <a href="/admin" style="font-size:.8rem; color:var(--text-muted); text-decoration:none;">後台管理 →</a>
   </div>
 </div>
 
@@ -38,7 +94,7 @@
 <!-- 作答畫面 -->
 <div id="quiz-screen" style="display:none;">
   <nav class="navbar">
-    <h1 id="nav-exam-name">線上作答</h1>
+    <h1 id="nav-exam-name">Bebras 練習</h1>
     <div style="display:flex; align-items:center; gap:12px;">
       <span id="nav-student" style="font-weight:700; color:var(--text-secondary); font-size:.85rem;"></span>
       <button class="navbar-overview-btn" onclick="toggleOverview()" title="題目總覽">📋 總覽</button>
@@ -78,11 +134,6 @@
       </label>
       <button id="btn-next" onclick="nextQuestion()" class="btn btn-outline">下一題 →</button>
     </div>
-
-    <div class="quiz-submit-area">
-      <button class="btn btn-success btn-lg" onclick="submitAnswers()">交卷</button>
-      <p>選填題目可跳過，不影響必答分數</p>
-    </div>
   </div>
 </div>
 
@@ -118,10 +169,15 @@
   </div>
 </div>
 
-<!-- Lightbox -->
-<div id="lightbox" onclick="closeLightbox()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.88); z-index:999; align-items:center; justify-content:center; cursor:zoom-out; padding:20px;">
-  <img id="lightbox-img" src="" alt="" style="max-width:95vw; max-height:92vh; object-fit:contain; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); user-select:none;">
-  <button onclick="closeLightbox()" style="position:fixed; top:16px; right:20px; background:rgba(255,255,255,.15); border:none; color:white; font-size:1.4rem; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+<!-- Lightbox（支援縮放） -->
+<div id="lightbox" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.92); z-index:999; align-items:center; justify-content:center; padding:20px; overflow:hidden; touch-action:none;">
+  <img id="lightbox-img" src="" alt="" style="max-width:95vw; max-height:92vh; object-fit:contain; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); user-select:none; transition:transform .15s ease; transform-origin:center center; cursor:grab;">
+  <button onclick="closeLightbox()" style="position:fixed; top:16px; right:20px; background:rgba(255,255,255,.2); border:none; color:white; font-size:1.4rem; width:44px; height:44px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:1000;">✕</button>
+  <div style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:1000;">
+    <button onclick="lbZoom(1)" style="background:rgba(255,255,255,.2); border:none; color:white; font-size:1.2rem; width:40px; height:40px; border-radius:50%; cursor:pointer;">＋</button>
+    <button onclick="lbZoom(-1)" style="background:rgba(255,255,255,.2); border:none; color:white; font-size:1.2rem; width:40px; height:40px; border-radius:50%; cursor:pointer;">－</button>
+    <button onclick="lbReset()" style="background:rgba(255,255,255,.2); border:none; color:white; font-size:.8rem; width:40px; height:40px; border-radius:50%; cursor:pointer;">1:1</button>
+  </div>
 </div>
 
 <script>
@@ -141,18 +197,18 @@ async function loadExams() {
     const subtitle = document.getElementById('hero-subtitle');
 
     if (!exams.length) {
-      subtitle.textContent = '目前沒有開放中的考試';
-      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:.9rem; text-align:center; margin-top:8px;">請稍後再來或聯繫管理員開放考試。</p>';
+      subtitle.textContent = '目前沒有開放中的練習';
+      listEl.innerHTML = '<p style="color:var(--text-muted); font-size:.9rem;">請稍後再來或聯繫管理員開放考試。</p>';
       return;
     }
 
-    subtitle.textContent = '選擇考試，開始作答';
+    subtitle.textContent = `共 ${exams.length} 場練習開放中`;
     listEl.innerHTML = exams.map(e => `
-      <div style="background:rgba(255,255,255,.08); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:18px 22px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:16px;">
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 22px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:var(--shadow-sm); transition:box-shadow .2s, border-color .2s;" onmouseover="this.style.boxShadow='var(--shadow)';this.style.borderColor='var(--border-2)';" onmouseout="this.style.boxShadow='var(--shadow-sm)';this.style.borderColor='var(--border)';">
         <div>
-          <div style="font-weight:700; font-size:1.05rem; color:var(--nord6);">${esc(e.name)}</div>
-          ${e.description ? `<div style="font-size:.82rem; color:var(--nord4); margin-top:4px;">${esc(e.description)}</div>` : ''}
-          <div style="font-size:.78rem; color:var(--nord3); margin-top:4px;">${e.question_count} 題</div>
+          <div style="font-weight:700; font-size:1.02rem; color:var(--text-primary);">${esc(e.name)}</div>
+          ${e.description ? `<div style="font-size:.82rem; color:var(--text-muted); margin-top:4px;">${esc(e.description)}</div>` : ''}
+          <div style="font-size:.78rem; color:var(--text-muted); margin-top:4px;">${e.question_count} 題</div>
         </div>
         <button onclick="selectExam(${e.id},'${esc(e.name)}')" style="white-space:nowrap; flex-shrink:0; padding:10px 20px; border-radius:9px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.92rem; border:none; cursor:pointer; transition:background .2s, transform .15s;">開始 →</button>
       </div>
@@ -203,12 +259,38 @@ function renderQuestions() {
 }
 
 function showQuestion(index) {
-  if (index < 0 || index >= questions.length) return;
+  if (index < 0 || index > questions.length) return;
   currentQuestionIndex = index;
-  const q = questions[index];
   const c = document.getElementById('question-display');
 
-  // 找到題組名稱
+  // 最後一頁：交卷確認頁
+  if (index === questions.length) {
+    const required = questions.filter(q => !q.is_optional);
+    const answeredRequired = required.filter(q => userAnswers[q.id]).length;
+    const unanswered = required.length - answeredRequired;
+    c.innerHTML = `
+      <div class="question-card" style="text-align:center; padding:48px 28px;">
+        <div style="font-size:2.5rem; margin-bottom:16px;">📝</div>
+        <h2 style="font-size:1.3rem; font-weight:900; color:var(--text-primary); margin-bottom:12px;">確認交卷</h2>
+        <p style="color:var(--text-secondary); font-size:.95rem; margin-bottom:6px;">
+          必答 ${answeredRequired} / ${required.length} 題已作答
+        </p>
+        ${unanswered > 0 ? `<p style="color:var(--danger); font-weight:700; font-size:.92rem; margin-bottom:20px;">⚠ 還有 ${unanswered} 道必答題未作答</p>` : `<p style="color:var(--success); font-weight:700; font-size:.92rem; margin-bottom:20px;">✓ 所有必答題已完成</p>`}
+        <button class="btn btn-success btn-lg" onclick="submitAnswers()" style="padding:14px 56px; font-size:1.05rem;">確認交卷</button>
+        <p style="font-size:.78rem; color:var(--text-muted); margin-top:10px;">選填題目可跳過，不影響必答分數</p>
+      </div>
+    `;
+    document.getElementById('btn-prev').disabled = false;
+    document.getElementById('btn-prev').style.opacity = '1';
+    document.getElementById('btn-next').disabled = true;
+    document.getElementById('btn-next').style.opacity = '.4';
+    window.scrollTo(0, 0);
+    updateProgress();
+    updateOverviewGrid();
+    return;
+  }
+
+  const q = questions[index];
   const groupLabel = q.group_name || null;
 
   c.innerHTML = `
@@ -244,11 +326,10 @@ function showQuestion(index) {
     </div>
   `;
 
-  // 更新導覽按鈕狀態
   document.getElementById('btn-prev').disabled = index === 0;
   document.getElementById('btn-prev').style.opacity = index === 0 ? '.4' : '1';
-  document.getElementById('btn-next').disabled = index === questions.length - 1;
-  document.getElementById('btn-next').style.opacity = index === questions.length - 1 ? '.4' : '1';
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-next').style.opacity = '1';
 
   window.scrollTo(0, 0);
   updateProgress();
@@ -256,7 +337,7 @@ function showQuestion(index) {
 }
 
 function nextQuestion() {
-  if (currentQuestionIndex < questions.length - 1) showQuestion(currentQuestionIndex + 1);
+  if (currentQuestionIndex <= questions.length - 1) showQuestion(currentQuestionIndex + 1);
 }
 
 function prevQuestion() {
@@ -299,14 +380,17 @@ function updateOverviewGrid() {
 }
 
 function selectOpt(qId, opt, el) {
+  if (userAnswers[qId] === opt) return; // 避免重複觸發
   ['A','B','C','D','E','F'].forEach(o => document.getElementById(`opt-${qId}-${o}`)?.classList.remove('selected'));
   el.classList.add('selected');
   userAnswers[qId] = opt;
   updateProgress();
   updateOverviewGrid();
-  // 自動下一題
+  // 自動下一題（含最後一題→交卷頁）
   if (document.getElementById('auto-next').checked) {
-    setTimeout(() => nextQuestion(), 300);
+    setTimeout(() => {
+      if (currentQuestionIndex <= questions.length - 1) showQuestion(currentQuestionIndex + 1);
+    }, 300);
   }
 }
 
@@ -427,9 +511,16 @@ function restartQuiz() {
   loadExams();
 }
 
+let lbScale = 1;
+let lbPanX = 0, lbPanY = 0;
+let lbDragging = false, lbStartX, lbStartY;
+
 function openLightbox(src) {
   const lb = document.getElementById('lightbox');
-  document.getElementById('lightbox-img').src = src;
+  const img = document.getElementById('lightbox-img');
+  img.src = src;
+  lbScale = 1; lbPanX = 0; lbPanY = 0;
+  lbUpdateTransform();
   lb.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 }
@@ -437,11 +528,79 @@ function closeLightbox() {
   document.getElementById('lightbox').style.display = 'none';
   document.body.style.overflow = '';
 }
+function lbZoom(dir) {
+  lbScale = Math.max(0.5, Math.min(8, lbScale + dir * 0.5));
+  if (lbScale <= 1) { lbPanX = 0; lbPanY = 0; }
+  lbUpdateTransform();
+}
+function lbReset() { lbScale = 1; lbPanX = 0; lbPanY = 0; lbUpdateTransform(); }
+function lbUpdateTransform() {
+  document.getElementById('lightbox-img').style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbScale})`;
+}
+
+// 滾輪縮放
+document.getElementById('lightbox')?.addEventListener('wheel', e => {
+  e.preventDefault();
+  lbZoom(e.deltaY < 0 ? 1 : -1);
+}, { passive: false });
+
+// 拖曳平移
+(function() {
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  if (!lb || !img) return;
+
+  img.addEventListener('mousedown', e => { if (lbScale > 1) { lbDragging = true; lbStartX = e.clientX - lbPanX; lbStartY = e.clientY - lbPanY; img.style.cursor = 'grabbing'; e.preventDefault(); }});
+  document.addEventListener('mousemove', e => { if (lbDragging) { lbPanX = e.clientX - lbStartX; lbPanY = e.clientY - lbStartY; lbUpdateTransform(); }});
+  document.addEventListener('mouseup', () => { lbDragging = false; img.style.cursor = lbScale > 1 ? 'grab' : 'grab'; });
+
+  // 觸控雙指縮放
+  let lastDist = 0;
+  lb.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) { lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
+    if (e.touches.length === 1 && lbScale > 1) { lbDragging = true; lbStartX = e.touches[0].clientX - lbPanX; lbStartY = e.touches[0].clientY - lbPanY; }
+  });
+  lb.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      if (lastDist) { lbScale = Math.max(0.5, Math.min(8, lbScale * (dist / lastDist))); lbUpdateTransform(); }
+      lastDist = dist;
+    }
+    if (e.touches.length === 1 && lbDragging) { lbPanX = e.touches[0].clientX - lbStartX; lbPanY = e.touches[0].clientY - lbStartY; lbUpdateTransform(); }
+  }, { passive: false });
+  lb.addEventListener('touchend', e => { if (e.touches.length < 2) lastDist = 0; if (e.touches.length === 0) lbDragging = false; });
+
+  // 點擊背景關閉（非拖曳時）
+  lb.addEventListener('click', e => { if (e.target === lb && !lbDragging && lbScale <= 1) closeLightbox(); });
+})();
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+async function loadPdfs() {
+  try {
+    const res = await fetch('/api/pdfs');
+    const pdfs = await res.json();
+    const c = document.getElementById('pdf-materials');
+    if (!pdfs.length) {
+      c.innerHTML = '<p style="color:var(--text-muted); font-size:.88rem;">尚無自學材料</p>';
+      return;
+    }
+    c.innerHTML = pdfs.map(p => `
+      <a href="${p.url}" target="_blank" style="display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; text-decoration:none; box-shadow:var(--shadow-sm); transition:box-shadow .2s, border-color .2s;" onmouseover="this.style.boxShadow='var(--shadow)';this.style.borderColor='var(--border-2)';" onmouseout="this.style.boxShadow='var(--shadow-sm)';this.style.borderColor='var(--border)';">
+        <span style="font-size:1.6rem; flex-shrink:0;">📄</span>
+        <div>
+          <div style="font-weight:700; font-size:.95rem; color:var(--text-primary);">${esc(p.name)}</div>
+          <div style="font-size:.78rem; color:var(--text-muted); margin-top:2px;">點擊開啟 PDF</div>
+        </div>
+      </a>
+    `).join('');
+  } catch { /* ignore */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadExams();
+  loadPdfs();
   document.getElementById('student-name').addEventListener('keydown', e => { if(e.key==='Enter') startQuiz(); });
   document.addEventListener('keydown', e => {
     if(e.key==='Escape') { closeLightbox(); closeNameModal();
