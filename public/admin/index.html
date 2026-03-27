@@ -275,12 +275,13 @@
                 <th>姓名</th>
                 <th>Email</th>
                 <th style="width:90px;">登入方式</th>
+                <th style="width:160px;">最後上線</th>
                 <th style="width:160px;">註冊時間</th>
                 <th style="width:80px;">操作</th>
               </tr>
             </thead>
             <tbody id="students-tbody">
-              <tr><td colspan="7" style="padding:0;">
+              <tr><td colspan="8" style="padding:0;">
                 <div class="empty-state"><div class="icon">👤</div><h3>載入中...</h3></div>
               </td></tr>
             </tbody>
@@ -308,12 +309,13 @@
                 <th style="width:44px;">#</th>
                 <th>Email</th>
                 <th style="width:140px;">姓名</th>
+                <th style="width:160px;">最後上線</th>
                 <th style="width:160px;">新增時間</th>
                 <th style="width:80px;">操作</th>
               </tr>
             </thead>
             <tbody id="teachers-tbody">
-              <tr><td colspan="5" style="padding:0;">
+              <tr><td colspan="6" style="padding:0;">
                 <div class="empty-state"><div class="icon">👩‍🏫</div><h3>尚無老師</h3><p>新增 Google Email 來授權後台存取</p></div>
               </td></tr>
             </tbody>
@@ -1580,7 +1582,7 @@ async function loadStudents() {
   document.getElementById('select-all-students').checked = false;
   updateBatchDeleteBtn();
   if (!students.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="padding:0;"><div class="empty-state"><div class="icon">👤</div><h3>尚無學生</h3><p>學生註冊後會顯示在這裡</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:0;"><div class="empty-state"><div class="icon">👤</div><h3>尚無學生</h3><p>學生註冊後會顯示在這裡</p></div></td></tr>';
     return;
   }
   tbody.innerHTML = students.map((s, i) => `<tr>
@@ -1589,6 +1591,7 @@ async function loadStudents() {
     <td>${esc(s.name)}</td>
     <td>${esc(s.email || '—')}</td>
     <td>${s.google_id ? '<span style="color:var(--primary);font-size:.82rem;">Google</span>' : '<span style="font-size:.82rem;">Email</span>'}</td>
+    <td style="font-size:.83rem; color:var(--text-muted);">${s.last_login ? formatDate(s.last_login) : '—'}</td>
     <td>${formatDate(s.created_at)}</td>
     <td><button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id},'${esc(s.name)}')">刪除</button></td>
   </tr>`).join('');
@@ -1662,13 +1665,14 @@ async function loadTeachers() {
   const teachers = await res.json();
   const tbody = document.getElementById('teachers-tbody');
   if (!teachers.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:0;"><div class="empty-state"><div class="icon">👩‍🏫</div><h3>尚無老師</h3><p>新增 Google Email 來授權後台存取</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:0;"><div class="empty-state"><div class="icon">👩‍🏫</div><h3>尚無老師</h3><p>新增 Google Email 來授權後台存取</p></div></td></tr>';
     return;
   }
   tbody.innerHTML = teachers.map((t, i) => `<tr>
     <td>${i + 1}</td>
     <td>${esc(t.email)}</td>
     <td>${esc(t.name || '—')}</td>
+    <td style="font-size:.83rem; color:var(--text-muted);">${t.last_login ? formatDate(t.last_login) : '—'}</td>
     <td>${formatDate(t.created_at)}</td>
     <td><button class="btn btn-sm btn-danger" onclick="removeTeacher(${t.id},'${esc(t.email)}')">移除</button></td>
   </tr>`).join('');

@@ -158,6 +158,7 @@ app.post('/api/student/login', async (req, res) => {
     const match = await bcrypt.compare(password, student.password);
     if (!match) return res.status(401).json({ error: 'Email 或密碼錯誤' });
 
+    await supabase.from('students').update({ last_login: new Date().toISOString() }).eq('id', student.id);
     req.session.student = { id: student.id, name: student.name, email: student.email };
     res.json({ success: true, student: { name: student.name, email: student.email } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -195,6 +196,7 @@ app.post('/api/student/google-login', async (req, res) => {
       }
     }
 
+    await supabase.from('students').update({ last_login: new Date().toISOString() }).eq('id', student.id);
     req.session.student = { id: student.id, name: student.name, email: student.email };
     res.json({ success: true, student: { name: student.name, email: student.email } });
   } catch (e) { res.status(401).json({ error: 'Google 驗證失敗: ' + e.message }); }
@@ -395,6 +397,7 @@ app.post('/api/admin/google-login', async (req, res) => {
       return res.status(403).json({ error: `${email} 不是授權的老師帳號` });
     }
 
+    await supabase.from('teachers').update({ last_login: new Date().toISOString() }).eq('id', teacher.id);
     req.session.isAdmin = true;
     req.session.adminEmail = email;
     req.session.adminName = name;
@@ -434,7 +437,7 @@ app.get('/api/admin/check', (req, res) => {
 app.get('/api/admin/students', requireAdmin, async (req, res) => {
   try {
     const { data } = await supabase.from('students')
-      .select('id, name, email, google_id, created_at')
+      .select('id, name, email, google_id, created_at, last_login')
       .order('created_at', { ascending: false });
     res.json(data || []);
   } catch (e) { res.status(500).json({ error: e.message }); }
