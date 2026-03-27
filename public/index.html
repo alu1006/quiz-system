@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bebras 練習系統 — 運算思維挑戰</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -33,26 +34,30 @@
 
     <!-- 什麼是運算思維 -->
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; margin-bottom:20px; box-shadow:var(--shadow-sm);">
-      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">🧠 什麼是運算思維？</h2>
-      <p style="font-size:.92rem; line-height:1.8; color:var(--text-secondary); margin-bottom:14px;">
-        <strong>運算思維（Computational Thinking）</strong>是一套解決問題的思考方法，被視為 21 世紀的核心素養。它包含四大能力：
-      </p>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
-        <div style="background:var(--primary-light); border:1px solid #BFD0E8; border-radius:10px; padding:16px;">
-          <div style="font-weight:800; color:var(--primary); font-size:.88rem; margin-bottom:4px;">🔍 問題拆解</div>
-          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">將複雜問題分解成可處理的小部分</div>
+      <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:6px;">運算思維是什麼？</h2>
+      <p style="font-size:.88rem; color:var(--text-secondary); margin-bottom:18px;">一套不需要寫程式就能學會的解題思考法。點擊看看每個能力：</p>
+      <div id="ct-tabs" style="display:flex; gap:6px; margin-bottom:0;">
+        <button onclick="showCT(0,this)" class="ct-active" style="flex:1; padding:10px 6px; border:1.5px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; background:var(--surface); cursor:pointer; font-size:.82rem; font-weight:700; color:var(--text-primary); font-family:inherit; transition:all .15s;">拆解</button>
+        <button onclick="showCT(1,this)" style="flex:1; padding:10px 6px; border:1.5px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; background:var(--bg); cursor:pointer; font-size:.82rem; font-weight:700; color:var(--text-muted); font-family:inherit; transition:all .15s;">找規律</button>
+        <button onclick="showCT(2,this)" style="flex:1; padding:10px 6px; border:1.5px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; background:var(--bg); cursor:pointer; font-size:.82rem; font-weight:700; color:var(--text-muted); font-family:inherit; transition:all .15s;">抽象化</button>
+        <button onclick="showCT(3,this)" style="flex:1; padding:10px 6px; border:1.5px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; background:var(--bg); cursor:pointer; font-size:.82rem; font-weight:700; color:var(--text-muted); font-family:inherit; transition:all .15s;">設計步驟</button>
+      </div>
+      <div id="ct-panels" style="border:1.5px solid var(--border); border-radius:0 0 8px 8px; padding:20px; min-height:80px;">
+        <div class="ct-panel">
+          <div style="font-weight:800; font-size:.95rem; color:var(--text-primary); margin-bottom:8px;">🔍 問題拆解 Decomposition</div>
+          <p style="font-size:.88rem; color:var(--text-secondary); line-height:1.7; margin:0;">把一個大問題拆成幾個小問題，各個擊破。<br>例如：整理房間 → 先整理桌面、再整理衣櫃、最後拖地。</p>
         </div>
-        <div style="background:var(--success-light); border:1px solid var(--success-border); border-radius:10px; padding:16px;">
-          <div style="font-weight:800; color:var(--success); font-size:.88rem; margin-bottom:4px;">📐 模式辨識</div>
-          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">找出資料中的規律與重複結構</div>
+        <div class="ct-panel" style="display:none;">
+          <div style="font-weight:800; font-size:.95rem; color:var(--text-primary); margin-bottom:8px;">📐 模式辨識 Pattern Recognition</div>
+          <p style="font-size:.88rem; color:var(--text-secondary); line-height:1.7; margin:0;">觀察問題之間的共同點，找出規律。<br>例如：1, 3, 5, 7, ? → 發現都是 +2，答案是 9。</p>
         </div>
-        <div style="background:var(--optional-light); border:1px solid var(--optional-border); border-radius:10px; padding:16px;">
-          <div style="font-weight:800; color:var(--optional); font-size:.88rem; margin-bottom:4px;">🎯 抽象化</div>
-          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">忽略不重要的細節，聚焦關鍵資訊</div>
+        <div class="ct-panel" style="display:none;">
+          <div style="font-weight:800; font-size:.95rem; color:var(--text-primary); margin-bottom:8px;">🎯 抽象化 Abstraction</div>
+          <p style="font-size:.88rem; color:var(--text-secondary); line-height:1.7; margin:0;">去掉不重要的細節，只留下關鍵資訊。<br>例如：地鐵路線圖不畫出真實地形，只呈現站與站之間的連接關係。</p>
         </div>
-        <div style="background:var(--danger-light); border:1px solid var(--danger-border); border-radius:10px; padding:16px;">
-          <div style="font-weight:800; color:var(--danger); font-size:.88rem; margin-bottom:4px;">⚙️ 演算法設計</div>
-          <div style="font-size:.82rem; color:var(--text-secondary); line-height:1.6;">設計有步驟的解決方案</div>
+        <div class="ct-panel" style="display:none;">
+          <div style="font-weight:800; font-size:.95rem; color:var(--text-primary); margin-bottom:8px;">⚙️ 演算法設計 Algorithm Design</div>
+          <p style="font-size:.88rem; color:var(--text-secondary); line-height:1.7; margin:0;">把解法寫成一步一步的明確指令。<br>例如：泡麵的步驟 → 1.煮水 2.打開調味包 3.放入麵條 4.等3分鐘。</p>
         </div>
       </div>
     </div>
@@ -67,8 +72,7 @@
     <!-- 自學材料 -->
     <div style="margin-top:32px;">
       <h2 style="font-size:1.1rem; font-weight:900; color:var(--text-primary); margin-bottom:14px; display:flex; align-items:center; gap:8px;">📚 自學材料</h2>
-      <div id="pdf-materials" style="display:grid; gap:12px;">
-      </div>
+      <div id="pdf-materials" style="display:grid; gap:12px;"></div>
       <p style="font-size:.82rem; color:var(--text-muted); margin-top:8px;">點擊可直接開啟 PDF 檔案閱讀</p>
     </div>
   </div>
@@ -78,18 +82,73 @@
   </div>
 </div>
 
-<!-- 姓名輸入 Modal -->
+<!-- 登入/註冊 Modal -->
 <div id="name-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center;">
-  <div style="background:var(--nord1); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:36px 30px; width:min(400px,90vw); box-shadow:0 20px 60px rgba(0,0,0,.5);">
+  <div style="background:var(--nord1); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:36px 30px; width:min(420px,92vw); box-shadow:0 20px 60px rgba(0,0,0,.5);">
     <h2 style="margin-bottom:6px; font-size:1.15rem; color:var(--nord6); font-weight:800;" id="name-modal-exam-name">考試名稱</h2>
-    <p style="color:var(--nord4); font-size:.85rem; margin-bottom:22px;">請輸入您的姓名開始作答</p>
-    <input type="text" id="student-name" placeholder="輸入姓名" maxlength="20" autofocus
-      style="width:100%; box-sizing:border-box; padding:13px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.95rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; transition:border-color .2s, box-shadow .2s;">
-    <button onclick="startQuiz()"
-      style="width:100%; margin-top:14px; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; transition:background .2s, transform .15s; font-family:inherit;">開始作答 →</button>
-    <button onclick="closeNameModal()" style="margin-top:12px; width:100%; background:none; border:none; color:var(--nord4); cursor:pointer; font-size:.85rem; padding:6px; font-family:inherit;">取消</button>
+
+    <!-- 已登入狀態 -->
+    <div id="auth-logged-in" style="display:none;">
+      <p style="color:var(--nord4); font-size:.88rem; margin:16px 0;">歡迎回來，<strong style="color:var(--nord6);" id="auth-welcome-name"></strong></p>
+      <button onclick="startQuiz()" style="width:100%; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; font-family:inherit;">開始作答 →</button>
+      <button onclick="doStudentLogout()" style="margin-top:8px; width:100%; background:none; border:none; color:var(--nord4); cursor:pointer; font-size:.82rem; padding:6px; font-family:inherit;">切換帳號</button>
+    </div>
+
+    <!-- 未登入 -->
+    <div id="auth-not-logged">
+      <div id="auth-alert" style="margin-top:12px;"></div>
+
+      <!-- Tab: 登入 / 註冊 -->
+      <div style="display:flex; margin:16px 0 18px; border-bottom:2px solid rgba(216,222,233,.1);">
+        <button id="tab-login-btn" onclick="switchAuthTab('login')" style="flex:1; padding:10px; background:none; border:none; border-bottom:2px solid var(--nord8); margin-bottom:-2px; color:var(--nord6); font-weight:700; font-size:.9rem; cursor:pointer; font-family:inherit;">登入</button>
+        <button id="tab-register-btn" onclick="switchAuthTab('register')" style="flex:1; padding:10px; background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; color:var(--nord4); font-weight:700; font-size:.9rem; cursor:pointer; font-family:inherit;">註冊</button>
+      </div>
+
+      <!-- 登入表單 -->
+      <div id="auth-login-form">
+        <input type="email" id="login-email" placeholder="Email" autocomplete="email"
+          style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.92rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; margin-bottom:10px;">
+        <input type="password" id="login-password" placeholder="密碼" autocomplete="current-password"
+          style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.92rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit;">
+        <button onclick="doStudentLogin()" style="width:100%; margin-top:14px; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; font-family:inherit;">登入</button>
+      </div>
+
+      <!-- 註冊表單 -->
+      <div id="auth-register-form" style="display:none;">
+        <!-- 步驟 1：填寫資料 -->
+        <div id="reg-step1">
+          <input type="text" id="reg-name" placeholder="姓名" maxlength="20"
+            style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.92rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; margin-bottom:10px;">
+          <input type="email" id="reg-email" placeholder="Email" autocomplete="email"
+            style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.92rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; margin-bottom:10px;">
+          <input type="password" id="reg-password" placeholder="密碼（至少 4 字元）" autocomplete="new-password"
+            style="width:100%; box-sizing:border-box; padding:12px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:.92rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit;">
+          <button onclick="doStudentRegister()" style="width:100%; margin-top:14px; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; font-family:inherit;">註冊</button>
+        </div>
+        <!-- 步驟 2：輸入驗證碼 -->
+        <div id="reg-step2" style="display:none;">
+          <p style="color:var(--nord4); font-size:.88rem; margin-bottom:14px;">驗證碼已寄到 <strong style="color:var(--nord6);" id="verify-email-display"></strong></p>
+          <input type="text" id="verify-code" placeholder="輸入 6 位驗證碼" maxlength="6" autocomplete="one-time-code"
+            style="width:100%; box-sizing:border-box; padding:14px 16px; border:1.5px solid rgba(216,222,233,.2); border-radius:10px; font-size:1.2rem; background:rgba(255,255,255,.08); color:var(--nord6); outline:none; font-family:inherit; text-align:center; letter-spacing:6px;">
+          <button onclick="doStudentVerify()" style="width:100%; margin-top:14px; padding:13px; border-radius:10px; background:var(--nord8); color:var(--nord0); font-weight:800; font-size:.95rem; border:none; cursor:pointer; font-family:inherit;">驗證並開始</button>
+          <button onclick="document.getElementById('reg-step1').style.display='block'; document.getElementById('reg-step2').style.display='none';" style="margin-top:8px; width:100%; background:none; border:none; color:var(--nord4); cursor:pointer; font-size:.82rem; padding:6px; font-family:inherit;">← 重新填寫</button>
+        </div>
+      </div>
+
+      <!-- Google 分隔線 + 按鈕 -->
+      <div id="modal-divider" style="display:none; position:relative; text-align:center; margin:18px 0 14px; color:var(--nord4); font-size:.78rem;">
+        <span style="background:var(--nord1); padding:0 10px; position:relative; z-index:1;">或</span>
+        <div style="position:absolute; top:50%; left:0; right:0; border-top:1px solid rgba(216,222,233,.15);"></div>
+      </div>
+      <div id="modal-google-btn" style="display:flex; justify-content:center;"></div>
+    </div>
+
+    <button onclick="closeNameModal()" style="margin-top:14px; width:100%; background:none; border:none; color:var(--nord4); cursor:pointer; font-size:.85rem; padding:6px; font-family:inherit;">取消</button>
   </div>
 </div>
+
+<!-- hidden input for legacy compat -->
+<input type="hidden" id="student-name">
 
 <!-- 作答畫面 -->
 <div id="quiz-screen" style="display:none;">
@@ -141,7 +200,10 @@
 <div id="result-screen" style="display:none;">
   <nav class="navbar">
     <h1>作答結果</h1>
-    <button class="btn btn-outline btn-sm" onclick="restartQuiz()">重新作答</button>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-outline btn-sm" onclick="restartQuiz()">回首頁</button>
+      <button class="btn btn-outline btn-sm" onclick="retryExam()">重新作答</button>
+    </div>
   </nav>
   <div class="container">
     <div id="result-hero" class="result-hero">
@@ -166,6 +228,11 @@
 
     <h3 style="font-size:.85rem; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:.06em;">作答詳情</h3>
     <div id="result-details"></div>
+
+    <div style="display:flex; gap:12px; justify-content:center; margin-top:32px; padding-bottom:20px;">
+      <button class="btn btn-outline" onclick="restartQuiz()" style="padding:12px 32px;">回首頁</button>
+      <button class="btn btn-primary" onclick="retryExam()" style="padding:12px 32px;">重新作答</button>
+    </div>
   </div>
 </div>
 
@@ -182,11 +249,164 @@
 
 <script>
 let studentName = '';
+let studentEmail = '';
 let questions = [];
 let userAnswers = {};
 let currentExamId = null;
 let currentExamName = '';
 let currentQuestionIndex = 0;
+
+// ─── 學生會員系統 ───
+async function checkStudentSession() {
+  try {
+    const res = await fetch('/api/student/me');
+    const data = await res.json();
+    if (data.loggedIn) {
+      studentName = data.student.name;
+      studentEmail = data.student.email;
+    }
+  } catch {}
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('auth-register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login-btn').style.borderBottomColor = tab === 'login' ? 'var(--nord8)' : 'transparent';
+  document.getElementById('tab-login-btn').style.color = tab === 'login' ? 'var(--nord6)' : 'var(--nord4)';
+  document.getElementById('tab-register-btn').style.borderBottomColor = tab === 'register' ? 'var(--nord8)' : 'transparent';
+  document.getElementById('tab-register-btn').style.color = tab === 'register' ? 'var(--nord6)' : 'var(--nord4)';
+  document.getElementById('auth-alert').innerHTML = '';
+}
+
+function showAuthAlert(msg, type) {
+  const color = type === 'success' ? 'rgba(163,190,140,.3)' : 'rgba(191,97,106,.3)';
+  const textColor = type === 'success' ? '#A3BE8C' : '#BF616A';
+  document.getElementById('auth-alert').innerHTML =
+    `<div style="padding:10px 14px; border-radius:8px; background:${color}; color:${textColor}; font-size:.85rem;">${esc(msg)}</div>`;
+}
+
+async function doStudentLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!email || !password) return showAuthAlert('請輸入 Email 和密碼');
+  try {
+    const res = await fetch('/api/student/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      studentName = data.student.name;
+      studentEmail = data.student.email;
+      onStudentLoggedIn();
+    } else { showAuthAlert(data.error); }
+  } catch { showAuthAlert('連線失敗'); }
+}
+
+let pendingVerifyEmail = '';
+
+async function doStudentRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  if (!name || !email || !password) return showAuthAlert('請填寫所有欄位');
+  try {
+    const res = await fetch('/api/student/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showAuthAlert(data.error);
+    if (data.needVerify) {
+      // 顯示驗證碼輸入
+      pendingVerifyEmail = email;
+      document.getElementById('verify-email-display').textContent = email;
+      document.getElementById('reg-step1').style.display = 'none';
+      document.getElementById('reg-step2').style.display = 'block';
+      document.getElementById('auth-alert').innerHTML = '';
+      setTimeout(() => document.getElementById('verify-code').focus(), 100);
+    } else {
+      // 無需驗證，直接登入
+      studentName = data.student.name;
+      studentEmail = data.student.email;
+      onStudentLoggedIn();
+    }
+  } catch { showAuthAlert('連線失敗'); }
+}
+
+async function doStudentVerify() {
+  const code = document.getElementById('verify-code').value.trim();
+  if (!code || code.length !== 6) return showAuthAlert('請輸入 6 位驗證碼');
+  try {
+    const res = await fetch('/api/student/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: pendingVerifyEmail, code }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      studentName = data.student.name;
+      studentEmail = data.student.email;
+      onStudentLoggedIn();
+    } else { showAuthAlert(data.error); }
+  } catch { showAuthAlert('連線失敗'); }
+}
+
+function onStudentLoggedIn() {
+  document.getElementById('auth-not-logged').style.display = 'none';
+  document.getElementById('auth-logged-in').style.display = 'block';
+  document.getElementById('auth-welcome-name').textContent = studentName;
+  // 自動開始作答
+  if (currentExamId) startQuiz();
+}
+
+async function doStudentLogout() {
+  await fetch('/api/student/logout', { method: 'POST' });
+  studentName = ''; studentEmail = '';
+  document.getElementById('auth-not-logged').style.display = 'block';
+  document.getElementById('auth-logged-in').style.display = 'none';
+  document.getElementById('auth-alert').innerHTML = '';
+}
+
+// ─── Google 登入（選用）───
+async function initStudentGoogleLogin() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    if (!cfg.googleClientId) return;
+    const waitGsi = () => new Promise(resolve => {
+      if (window.google?.accounts) return resolve();
+      const t = setInterval(() => { if (window.google?.accounts) { clearInterval(t); resolve(); }}, 100);
+      setTimeout(() => { clearInterval(t); resolve(); }, 5000);
+    });
+    await waitGsi();
+    if (!window.google?.accounts) return;
+    google.accounts.id.initialize({
+      client_id: cfg.googleClientId,
+      callback: handleStudentGoogle,
+    });
+    const modalBtn = document.getElementById('modal-google-btn');
+    if (modalBtn) {
+      google.accounts.id.renderButton(modalBtn, { theme: 'outline', size: 'large', width: 300, text: 'signin_with' });
+      const divider = document.getElementById('modal-divider');
+      if (divider) divider.style.display = 'block';
+    }
+  } catch (e) { console.warn('Google init failed:', e); }
+}
+
+async function handleStudentGoogle(response) {
+  try {
+    const res = await fetch('/api/student/google-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      studentName = data.student.name;
+      studentEmail = data.student.email;
+      onStudentLoggedIn();
+    } else { showAuthAlert(data.error); }
+  } catch { showAuthAlert('Google 登入失敗'); }
+}
 
 // ─── 載入考試列表 ───
 async function loadExams() {
@@ -222,9 +442,19 @@ function selectExam(examId, examName) {
   currentExamId = examId;
   currentExamName = examName;
   document.getElementById('name-modal-exam-name').textContent = examName;
-  document.getElementById('student-name').value = '';
+  if (studentName) {
+    // 已登入：顯示歡迎
+    document.getElementById('auth-not-logged').style.display = 'none';
+    document.getElementById('auth-logged-in').style.display = 'block';
+    document.getElementById('auth-welcome-name').textContent = studentName;
+  } else {
+    // 未登入：顯示登入/註冊
+    document.getElementById('auth-not-logged').style.display = 'block';
+    document.getElementById('auth-logged-in').style.display = 'none';
+    document.getElementById('auth-alert').innerHTML = '';
+    switchAuthTab('login');
+  }
   document.getElementById('name-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('student-name').focus(), 100);
 }
 
 function closeNameModal() {
@@ -232,10 +462,7 @@ function closeNameModal() {
 }
 
 async function startQuiz() {
-  const inp = document.getElementById('student-name');
-  const name = inp.value.trim();
-  if (!name) { inp.style.borderColor='rgba(191,97,106,.6)'; inp.focus(); return; }
-  studentName = name;
+  if (!studentName) return;
   try {
     const res = await fetch(`/api/exams/${currentExamId}/questions`);
     if (!res.ok) { alert('考試不存在或已關閉。'); return; }
@@ -502,13 +729,23 @@ function showResult(data) {
 }
 
 function restartQuiz() {
-  studentName=''; userAnswers={}; currentExamId=null;
-  document.getElementById('student-name').value='';
+  userAnswers={}; currentExamId=null;
   document.getElementById('result-screen').style.display='none';
   document.getElementById('result-hero').classList.remove('fail');
   document.getElementById('result-optional-note').textContent='';
   document.getElementById('welcome-screen').style.display='block';
   loadExams();
+}
+
+function retryExam() {
+  const eid = currentExamId;
+  const ename = currentExamName;
+  userAnswers={};
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('result-hero').classList.remove('fail');
+  document.getElementById('result-optional-note').textContent='';
+  if (eid) { currentExamId = eid; currentExamName = ename; startQuiz(); }
+  else restartQuiz();
 }
 
 let lbScale = 1;
@@ -577,6 +814,14 @@ document.getElementById('lightbox')?.addEventListener('wheel', e => {
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+function showCT(idx, btn) {
+  document.querySelectorAll('.ct-panel').forEach((p, i) => p.style.display = i === idx ? 'block' : 'none');
+  document.querySelectorAll('#ct-tabs button').forEach((b, i) => {
+    b.style.background = i === idx ? 'var(--surface)' : 'var(--bg)';
+    b.style.color = i === idx ? 'var(--text-primary)' : 'var(--text-muted)';
+  });
+}
+
 async function loadPdfs() {
   try {
     const res = await fetch('/api/pdfs');
@@ -598,10 +843,20 @@ async function loadPdfs() {
   } catch { /* ignore */ }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkStudentSession();
   loadExams();
   loadPdfs();
-  document.getElementById('student-name').addEventListener('keydown', e => { if(e.key==='Enter') startQuiz(); });
+  initStudentGoogleLogin();
+  // Enter 鍵觸發登入/註冊
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const modal = document.getElementById('name-modal');
+    if (modal.style.display !== 'flex') return;
+    if (document.getElementById('auth-logged-in').style.display !== 'none') { startQuiz(); return; }
+    if (document.getElementById('auth-login-form').style.display !== 'none') doStudentLogin();
+    else doStudentRegister();
+  });
   document.addEventListener('keydown', e => {
     if(e.key==='Escape') { closeLightbox(); closeNameModal();
       const panel = document.getElementById('overview-panel');

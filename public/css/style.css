@@ -30,7 +30,7 @@
 
   --text-primary:   var(--nord0);
   --text-secondary: var(--nord3);
-  --text-muted:     var(--nord4);
+  --text-muted:     #7B8794;
 
   --primary:        var(--nord10);
   --primary-light:  #EDF2F8;
